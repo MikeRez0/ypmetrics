@@ -40,7 +40,7 @@ func MethodNotAllowedErrorHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var (
-	UpdateMetricRe = regexp.MustCompile(`^/update/(\w+)/(\w+)/(\d+(?:\.\d+)?)$`)
+	UpdateMetricRe = regexp.MustCompile(`^/update/(\w+)/(\w*)/?(\d*(?:\.\d+)?)$`) //`^/update/(\w+)/(\w+)/(\d+(?:\.\d+)?)$`)
 	GetMetricRe    = regexp.MustCompile(`^/read/(\w+)/(\w+)$`)
 )
 

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -11,7 +10,6 @@ import (
 
 func (mh *MetricsHandler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	matches := UpdateMetricRe.FindStringSubmatch(r.URL.Path)
-	fmt.Println(matches)
 	//Expected fullstring + groups: [1]:metricType, [2]:metric, [3]:value
 	if len(matches) < 4 {
 		BadRequestErrorHandler(w, r)
@@ -23,6 +21,11 @@ func (mh *MetricsHandler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		metric     = matches[2]
 		valueRaw   = matches[3]
 	)
+
+	if metric == "" {
+		NotFoundErrorHandler(w, r)
+		return
+	}
 
 	switch metricType {
 	case storage.GaugeType:
@@ -40,7 +43,7 @@ func (mh *MetricsHandler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 		}
 		mh.store.UpdateCounter(metric, storage.CounterValue(value))
 	default:
-		NotFoundErrorHandler(w, r)
+		BadRequestErrorHandler(w, r)
 		return
 	}
 
@@ -77,7 +80,7 @@ func (mh *MetricsHandler) GetMetric(w http.ResponseWriter, r *http.Request) {
 		}
 		io.WriteString(w, strconv.FormatInt(int64(value), 10))
 	default:
-		NotFoundErrorHandler(w, r)
+		BadRequestErrorHandler(w, r)
 		return
 	}
 
