@@ -25,7 +25,6 @@ func ReadRuntimeMetrics(metrics *MetricStore) *MetricStore {
 	readStat := func(name string) storage.GaugeValue {
 		s := reflect.ValueOf(&memStats).Elem()
 		v := s.FieldByName(name)
-		// fmt.Println(name, v.Type(), v.Interface())
 		if v.CanFloat() {
 			metric := s.FieldByName(name).Float()
 			return storage.GaugeValue(metric)

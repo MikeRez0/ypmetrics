@@ -22,11 +22,11 @@ func run() error {
 	var metricStore *agent.MetricStore = agent.NewMetricStore()
 
 	for i := 1; ; i++ {
-		fmt.Println("Poll", i)
+		// fmt.Println("Poll", i)
 		poll(metricStore)
-		fmt.Println(metricStore.Metrics)
+		// fmt.Println(metricStore.Metrics)
 		if i*pollInterval == reportInterval {
-			fmt.Println("Report...")
+			// fmt.Println("Report...")
 			report(metricStore)
 			clear(metricStore.Metrics)
 			i = 0
@@ -67,7 +67,6 @@ func report(metricStore *agent.MetricStore) {
 		if resp.StatusCode != http.StatusOK {
 			fmt.Println(requestStr)
 			fmt.Println("Status from server:", resp.StatusCode)
-			fmt.Println(resp.Body)
 		}
 	}
 }
