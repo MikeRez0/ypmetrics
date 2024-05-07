@@ -19,7 +19,7 @@ func run() error {
 	pollInterval := 2
 	reportInterval := 10
 
-	var metricStore *agent.MetricStore = agent.NewMetricStore()
+	var metricStore = agent.NewMetricStore()
 
 	for i := 1; ; i++ {
 		// fmt.Println("Poll", i)
@@ -64,6 +64,7 @@ func report(metricStore *agent.MetricStore) {
 			fmt.Println(err)
 			return
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			fmt.Println(requestStr)
 			fmt.Println("Status from server:", resp.StatusCode)
