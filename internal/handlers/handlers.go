@@ -9,6 +9,7 @@ import (
 )
 
 type Repository interface {
+	Metrics() []struct{ Name, Value string }
 	UpdateGauge(metric string, value storage.GaugeValue)
 	GetGauge(metric string) (storage.GaugeValue, error)
 	UpdateCounter(metric string, value storage.CounterValue)
