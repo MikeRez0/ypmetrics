@@ -20,6 +20,7 @@ func run() error {
 	var h = handlers.NewMetricsHandler(ms)
 
 	r := gin.Default()
+	r.GET("/", h.MetricListView)
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
 	r.GET("/value/:metricType/:metric", h.GetMetricGin)
 
