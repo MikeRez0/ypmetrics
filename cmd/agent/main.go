@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/caarlos0/env/v6"
+
 	"github.com/MikeRez0/ypmetrics/internal/agent"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
@@ -18,22 +20,31 @@ func main() {
 	}
 }
 
+type Config struct {
+	hostString     string `env:"ADDRESS"`
+	reportInterval int    `env:"REPORT_INTERVAL"`
+	pollInterval   int    `env:"POLL_INTERVAL"`
+}
+
 func run() error {
 	hostString := flag.String("a", `localhost:8080`, "HTTP server endpoint")
 	pollInterval := flag.Int("p", 2, "Poll interval")
 	reportInterval := flag.Int("r", 10, "Report interval")
 	flag.Parse()
 
+	config := Config{hostString: *hostString, pollInterval: *pollInterval, reportInterval: *reportInterval}
+	env.Parse(&config)
+
 	var metricStore = agent.NewMetricStore()
 
 	for i := 1; ; i++ {
 		poll(metricStore)
-		if i*(*pollInterval) >= *reportInterval {
-			report(metricStore, *hostString)
+		if i*(config.pollInterval) >= config.reportInterval {
+			report(metricStore, config.hostString)
 			clear(metricStore.Metrics)
 			i = 0
 		}
-		time.Sleep(time.Second * time.Duration(*pollInterval))
+		time.Sleep(time.Second * time.Duration(config.pollInterval))
 	}
 
 	// return nil
