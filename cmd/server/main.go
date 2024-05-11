@@ -3,6 +3,9 @@ package main
 import (
 	// "net/http"
 	"flag"
+	"fmt"
+
+	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -12,6 +15,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
 }
@@ -21,6 +25,11 @@ func run() error {
 	hostString := flag.String("a", `localhost:8080`, "HTTP server endpoint")
 	flag.Parse()
 
+	if envHostString := os.Getenv("ADDRESS"); envHostString != "" {
+		fmt.Printf("ADDRESS=%s", envHostString)
+		*hostString = envHostString
+	}
+
 	var ms = storage.NewMemStorage()
 	var h = handlers.NewMetricsHandler(ms)
 
@@ -29,6 +38,7 @@ func run() error {
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
 	r.GET("/value/:metricType/:metric", h.GetMetricGin)
 
+	fmt.Printf("Starting server on %s", *hostString)
 	return r.Run(*hostString)
 	// mux := http.NewServeMux()
 	// mux.Handle("/", h)
