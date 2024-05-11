@@ -21,9 +21,9 @@ func main() {
 }
 
 type Config struct {
-	hostString     string `env:"ADDRESS"`
-	reportInterval int    `env:"REPORT_INTERVAL"`
-	pollInterval   int    `env:"POLL_INTERVAL"`
+	HostString     string `env:"ADDRESS"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
 }
 
 func run() error {
@@ -32,19 +32,22 @@ func run() error {
 	reportInterval := flag.Int("r", 10, "Report interval")
 	flag.Parse()
 
-	config := Config{hostString: *hostString, pollInterval: *pollInterval, reportInterval: *reportInterval}
-	env.Parse(&config)
+	config := Config{HostString: *hostString, PollInterval: *pollInterval, ReportInterval: *reportInterval}
+	err := env.Parse(&config)
+	if err != nil {
+		return err
+	}
 
 	var metricStore = agent.NewMetricStore()
 
 	for i := 1; ; i++ {
 		poll(metricStore)
-		if i*(config.pollInterval) >= config.reportInterval {
-			report(metricStore, config.hostString)
+		if i*(config.PollInterval) >= config.ReportInterval {
+			report(metricStore, config.HostString)
 			clear(metricStore.Metrics)
 			i = 0
 		}
-		time.Sleep(time.Second * time.Duration(config.pollInterval))
+		time.Sleep(time.Second * time.Duration(config.PollInterval))
 	}
 
 	// return nil
