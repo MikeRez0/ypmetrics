@@ -27,7 +27,7 @@ func Test_report(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report(tt.args.metricStore)
+			report(tt.args.metricStore, `localhost:8080`)
 		})
 	}
 }

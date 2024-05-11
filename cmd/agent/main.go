@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -12,26 +13,27 @@ import (
 
 func main() {
 
-	run()
+	if err := run(); err != nil {
+		panic(err)
+	}
 }
 
 func run() error {
-	pollInterval := 2
-	reportInterval := 10
+	hostString := flag.String("a", `localhost:8080`, "HTTP server endpoint")
+	pollInterval := flag.Int("p", 2, "Poll interval")
+	reportInterval := flag.Int("r", 10, "Report interval")
+	flag.Parse()
 
 	var metricStore = agent.NewMetricStore()
 
 	for i := 1; ; i++ {
-		// fmt.Println("Poll", i)
 		poll(metricStore)
-		// fmt.Println(metricStore.Metrics)
-		if i*pollInterval == reportInterval {
-			// fmt.Println("Report...")
-			report(metricStore)
+		if i*(*pollInterval) >= *reportInterval {
+			report(metricStore, *hostString)
 			clear(metricStore.Metrics)
 			i = 0
 		}
-		time.Sleep(time.Second * time.Duration(pollInterval))
+		time.Sleep(time.Second * time.Duration(*pollInterval))
 	}
 
 	// return nil
@@ -44,15 +46,15 @@ func poll(metricStore *agent.MetricStore) {
 	metricStore.PushGaugeMetric("RandomValue", storage.GaugeValue(rand.Float64()*1_000))
 }
 
-func report(metricStore *agent.MetricStore) {
-	serverURL := "http://localhost:8080/"
+func report(metricStore *agent.MetricStore, serverURL string) {
+	serverURL = "http://" + serverURL
 
 	for name, metric := range metricStore.Metrics {
 
 		metricType := metric.MetricType
 		metricName := name
 		value := metric.Value
-		requestStr := serverURL + "update/" + metricType + "/" + metricName + "/"
+		requestStr := serverURL + "/update/" + metricType + "/" + metricName + "/"
 		if metricType == storage.CounterType {
 			requestStr += fmt.Sprint(value)
 		} else if metricType == storage.GaugeType {
