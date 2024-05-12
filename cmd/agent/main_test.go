@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/MikeRez0/ypmetrics/internal/agent"
+	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,18 +17,18 @@ func Test_poll(t *testing.T) {
 }
 
 func Test_report(t *testing.T) {
-	type args struct {
-		metricStore *agent.MetricStore
-	}
+	ms := agent.NewMetricStore()
+	ms.PushCounterMetric("TestCounter", storage.CounterValue(10))
+	ms.PushGaugeMetric("TestGauge", storage.GaugeValue(15))
+
 	tests := []struct {
 		name string
-		args args
 	}{
-		// TODO: Add test cases.
+		{name: "test1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report(tt.args.metricStore, `localhost:8080`)
+			report(ms, `localhost:8080`)
 		})
 	}
 }
