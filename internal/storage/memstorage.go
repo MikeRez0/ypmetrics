@@ -1,9 +1,5 @@
 package storage
 
-import (
-	"fmt"
-)
-
 type MemStorage struct {
 	MetricsGauge   map[string]GaugeValue
 	MetricsCounter map[string]CounterValue
@@ -20,11 +16,7 @@ func (ms *MemStorage) UpdateGauge(metric string, value GaugeValue) {
 }
 
 func (ms *MemStorage) GetGauge(metric string) (GaugeValue, error) {
-	if val, ok := ms.MetricsGauge[metric]; ok {
-		return val, nil
-	} else {
-		return 0, fmt.Errorf("not found %s", metric)
-	}
+	return ms.MetricsGauge[metric], nil
 }
 
 func (ms *MemStorage) UpdateCounter(metric string, value CounterValue) {
@@ -36,9 +28,5 @@ func (ms *MemStorage) UpdateCounter(metric string, value CounterValue) {
 }
 
 func (ms *MemStorage) GetCounter(metric string) (CounterValue, error) {
-	if val, ok := ms.MetricsCounter[metric]; ok {
-		return val, nil
-	} else {
-		return 0, fmt.Errorf("not found %s", metric)
-	}
+	return ms.MetricsCounter[metric], nil
 }
