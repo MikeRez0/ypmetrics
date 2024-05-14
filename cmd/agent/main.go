@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -14,7 +15,6 @@ import (
 )
 
 func main() {
-
 	if err := run(); err != nil {
 		panic(err)
 	}
@@ -49,8 +49,6 @@ func run() error {
 		}
 		time.Sleep(time.Second * time.Duration(config.PollInterval))
 	}
-
-	// return nil
 }
 
 func poll(metricStore *agent.MetricStore) {
@@ -64,26 +62,29 @@ func report(metricStore *agent.MetricStore, serverURL string) {
 	serverURL = "http://" + serverURL
 
 	for name, metric := range metricStore.Metrics {
-
 		metricType := metric.MetricType
 		metricName := name
 		value := metric.Value
 		requestStr := serverURL + "/update/" + metricType + "/" + metricName + "/"
 		if metricType == storage.CounterType {
-			requestStr += fmt.Sprint(value)
+			if v, ok := value.(storage.CounterValue); ok {
+				requestStr += strconv.FormatInt(int64(v), 10)
+			}
 		} else if metricType == storage.GaugeType {
-			requestStr += fmt.Sprintf("%.5f", value)
+			if v, ok := value.(storage.GaugeValue); ok {
+				requestStr += strconv.FormatFloat(float64(v), 'f', 5, 64)
+			}
 		}
 		resp, err := http.Post(requestStr, "text/plain", nil)
 		if err != nil {
-			fmt.Println(requestStr)
-			fmt.Println(err)
+			log.Println(requestStr)
+			log.Println(err)
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
-			fmt.Println(requestStr)
-			fmt.Println("Status from server:", resp.StatusCode)
+			log.Println(requestStr)
+			log.Println("Status from server:", resp.StatusCode)
 		}
 	}
 }

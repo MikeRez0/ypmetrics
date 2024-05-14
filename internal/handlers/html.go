@@ -8,7 +8,7 @@ import (
 )
 
 func (mh *MetricsHandler) MetricListView(c *gin.Context) {
-	metrics := mh.store.Metrics()
+	metrics := mh.Store.Metrics()
 
 	var tmplFile = "../../internal/templates/metrics.html"
 	tmpl, err := template.New(tmplFile).ParseFiles(tmplFile)

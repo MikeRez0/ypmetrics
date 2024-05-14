@@ -13,9 +13,7 @@ func Test_poll(t *testing.T) {
 	poll(ms)
 	assert.Contains(t, ms.Metrics, "PollCount")
 	assert.Contains(t, ms.Metrics, "RandomValue")
-
 }
-
 func Test_report(t *testing.T) {
 	ms := agent.NewMetricStore()
 	ms.PushCounterMetric("TestCounter", storage.CounterValue(10))

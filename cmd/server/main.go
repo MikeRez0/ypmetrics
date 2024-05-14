@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "net/http"
 	"flag"
 	"fmt"
 
@@ -20,28 +19,27 @@ func main() {
 	}
 }
 
-func run() error {
+func setupRouter(h *handlers.MetricsHandler) *gin.Engine {
+	r := gin.Default()
+	r.HandleMethodNotAllowed = true
+	r.GET("/", h.MetricListView)
+	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
+	r.GET("/value/:metricType/:metric", h.GetMetricGin)
 
+	return r
+}
+
+func run() error {
 	hostString := flag.String("a", `localhost:8080`, "HTTP server endpoint")
 	flag.Parse()
 
 	if envHostString := os.Getenv("ADDRESS"); envHostString != "" {
-		fmt.Printf("ADDRESS=%s", envHostString)
 		*hostString = envHostString
 	}
 
 	var ms = storage.NewMemStorage()
 	var h = handlers.NewMetricsHandler(ms)
+	r := setupRouter(h)
 
-	r := gin.Default()
-	r.GET("/", h.MetricListView)
-	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
-	r.GET("/value/:metricType/:metric", h.GetMetricGin)
-
-	fmt.Printf("Starting server on %s", *hostString)
 	return r.Run(*hostString)
-	// mux := http.NewServeMux()
-	// mux.Handle("/", h)
-
-	// return http.ListenAndServe(`:8080`, mux)
 }
