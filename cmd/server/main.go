@@ -1,8 +1,7 @@
 package main
 
 import (
-	// "net/http"
-	"github.com/gin-gonic/gin"
+	"net/http"
 
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
@@ -19,14 +18,8 @@ func run() error {
 	var ms = storage.NewMemStorage()
 	var h = handlers.NewMetricsHandler(ms)
 
-	r := gin.Default()
-	r.GET("/", h.MetricListView)
-	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
-	r.GET("/value/:metricType/:metric", h.GetMetricGin)
+	mux := http.NewServeMux()
+	mux.Handle("/", h)
 
-	return r.Run()
-	// mux := http.NewServeMux()
-	// mux.Handle("/", h)
-
-	// return http.ListenAndServe(`:8080`, mux)
+	return http.ListenAndServe(`:8080`, mux)
 }

@@ -15,23 +15,6 @@ func NewMemStorage() *MemStorage {
 	return &MemStorage{mg, mc}
 }
 
-func (ms *MemStorage) Metrics() (res []struct{ Name, Value string }) {
-	// var res []struct{ Name, Value string }
-	for name, value := range ms.MetricsCounter {
-		res = append(res, struct {
-			Name  string
-			Value string
-		}{name, fmt.Sprint(value)})
-	}
-	for name, value := range ms.MetricsGauge {
-		res = append(res, struct {
-			Name  string
-			Value string
-		}{name, fmt.Sprint(value)})
-	}
-	return res
-}
-
 func (ms *MemStorage) UpdateGauge(metric string, value GaugeValue) {
 	ms.MetricsGauge[metric] = value
 }
