@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type MemStorage struct {
@@ -16,18 +17,17 @@ func NewMemStorage() *MemStorage {
 }
 
 func (ms *MemStorage) Metrics() (res []struct{ Name, Value string }) {
-	// var res []struct{ Name, Value string }
 	for name, value := range ms.MetricsCounter {
 		res = append(res, struct {
 			Name  string
 			Value string
-		}{name, fmt.Sprint(value)})
+		}{name, strconv.Itoa(int(value))})
 	}
 	for name, value := range ms.MetricsGauge {
 		res = append(res, struct {
 			Name  string
 			Value string
-		}{name, fmt.Sprint(value)})
+		}{name, strconv.FormatFloat(float64(value), 'f', 5, 64)})
 	}
 	return res
 }

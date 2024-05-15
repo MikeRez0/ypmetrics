@@ -1,24 +1,35 @@
 package handlers
 
 import (
+	_ "embed"
 	"html/template"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+//go:embed "templates/metrics.html"
+var templateContent string
+var tmpl *template.Template
+
 func (mh *MetricsHandler) MetricListView(c *gin.Context) {
 	metrics := mh.Store.Metrics()
 
-	var tmplFile = "../../internal/templates/metrics.html"
-	tmpl, err := template.New(tmplFile).ParseFiles(tmplFile)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
+	if tmpl == nil {
+		// var tmplFile = "../../internal/templates/metrics.html"
+		var err error
+		tmpl, err = template.New("metrics").Parse(templateContent) //ParseFiles(tmplFile)
+		if err != nil {
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			log.Println(err)
+			return
+		}
 	}
-	err = tmpl.ExecuteTemplate(c.Writer, "T", metrics)
+	err := tmpl.ExecuteTemplate(c.Writer, "T", metrics)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		err = c.AbortWithError(http.StatusInternalServerError, err)
+		log.Println(err)
 		return
 	}
 }
