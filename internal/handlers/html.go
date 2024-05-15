@@ -17,9 +17,8 @@ func (mh *MetricsHandler) MetricListView(c *gin.Context) {
 	metrics := mh.Store.Metrics()
 
 	if tmpl == nil {
-		// var tmplFile = "../../internal/templates/metrics.html"
 		var err error
-		tmpl, err = template.New("metrics").Parse(templateContent) //ParseFiles(tmplFile)
+		tmpl, err = template.New("metrics").Parse(templateContent)
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
 			log.Println(err)

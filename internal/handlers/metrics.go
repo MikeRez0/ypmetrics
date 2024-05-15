@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -54,19 +54,33 @@ func (mh *MetricsHandler) GetMetricGin(c *gin.Context) {
 	case storage.GaugeType:
 		value, err := mh.Store.GetGauge(metric)
 		if err != nil {
-			c.AbortWithError(http.StatusNotFound, err)
+			err = c.AbortWithError(http.StatusNotFound, err)
+			log.Println(err)
 			return
 		}
-		io.WriteString(c.Writer, strconv.FormatFloat(float64(value), 'f', -1, 64))
+		_, err = c.Writer.WriteString(strconv.FormatFloat(float64(value), 'f', -1, 64))
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	case storage.CounterType:
 		value, err := mh.Store.GetCounter(metric)
 		if err != nil {
-			c.AbortWithError(http.StatusNotFound, err)
+			err = c.AbortWithError(http.StatusNotFound, err)
+			log.Println(err)
 			return
 		}
-		io.WriteString(c.Writer, strconv.FormatInt(int64(value), 10))
+		_, err = c.Writer.WriteString(strconv.FormatInt(int64(value), 10))
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	default:
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metricType))
+		err := c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metricType))
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		return
 	}
 
