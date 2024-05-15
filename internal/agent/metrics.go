@@ -4,37 +4,25 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
 
-type MetricValue struct {
-	MetricType string
-	Name       string
-	Value      any
-}
-
 type MetricStore struct {
-	Metrics map[string]MetricValue
+	MetricsGauge   map[string]storage.GaugeValue
+	MetricsCounter map[string]storage.CounterValue
 }
 
 func NewMetricStore() *MetricStore {
 	var ms MetricStore
-	ms.Metrics = make(map[string]MetricValue)
+	ms.MetricsGauge = make(map[string]storage.GaugeValue)
+	ms.MetricsCounter = make(map[string]storage.CounterValue)
 	return &ms
 }
 
 func (ms *MetricStore) PushGaugeMetric(name string, value storage.GaugeValue) {
-	ms.Metrics[name] = MetricValue{
-		MetricType: storage.GaugeType,
-		Name:       name,
-		Value:      value,
-	}
+	ms.MetricsGauge[name] = value
 }
 func (ms *MetricStore) PushCounterMetric(name string, value storage.CounterValue) {
 	newValue := storage.CounterValue(0)
-	if val, ok := ms.Metrics[name]; ok {
-		newValue = val.Value.(storage.CounterValue)
+	if val, ok := ms.MetricsCounter[name]; ok {
+		newValue = val
 	}
-	ms.Metrics[name] = MetricValue{
-		MetricType: storage.CounterType,
-		Name:       name,
-		Value:      newValue + value,
-	}
+	ms.MetricsCounter[name] = newValue + value
 }

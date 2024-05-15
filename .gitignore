@@ -22,7 +22,7 @@ vendor/
 
 # IDEs directories
 .idea
-.vscode
+# .vscode
 
 #golangci-lint
 golangci-lint/
