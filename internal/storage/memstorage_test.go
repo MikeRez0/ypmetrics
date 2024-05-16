@@ -7,11 +7,8 @@ import (
 )
 
 func TestMemStorage_UpdateCounter(t *testing.T) {
+	ms := NewMemStorage()
 
-	ms := &MemStorage{
-		MetricsGauge:   map[string]GaugeValue{},
-		MetricsCounter: map[string]CounterValue{},
-	}
 	testMetric := "testCounter"
 	ms.UpdateCounter(testMetric, 1)
 	val, err := ms.GetCounter(testMetric)
@@ -25,15 +22,11 @@ func TestMemStorage_UpdateCounter(t *testing.T) {
 
 	_, err = ms.GetCounter(testMetric + "_fake")
 	assert.Error(t, err)
-
 }
 
 func TestMemStorage_UpdateGauge(t *testing.T) {
+	ms := NewMemStorage()
 
-	ms := &MemStorage{
-		MetricsGauge:   map[string]GaugeValue{},
-		MetricsCounter: map[string]CounterValue{},
-	}
 	testMetric := "testGauge"
 	ms.UpdateGauge(testMetric, 1)
 	val, err := ms.GetGauge(testMetric)
@@ -47,5 +40,4 @@ func TestMemStorage_UpdateGauge(t *testing.T) {
 
 	_, err = ms.GetGauge(testMetric + "_fake")
 	assert.Error(t, err)
-
 }

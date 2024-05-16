@@ -19,7 +19,6 @@ type Config struct {
 }
 
 func Run() error {
-
 	conf, err := config.NewConfigAgent()
 	if err != nil {
 		return fmt.Errorf("error while load config: %w", err)
@@ -27,15 +26,18 @@ func Run() error {
 
 	var metricStore = NewMetricStore()
 
-	for i := 1; ; i++ {
-		poll(metricStore)
-		if i*(conf.PollInterval) >= conf.ReportInterval {
+	tickerPoll := time.NewTicker(time.Duration(conf.PollInterval) * time.Second)
+	tickerReport := time.NewTicker(time.Duration(conf.ReportInterval) * time.Second)
+
+	for {
+		select {
+		case <-tickerPoll.C:
+			poll(metricStore)
+		case <-tickerReport.C:
 			report(metricStore, conf.HostString)
 			clear(metricStore.MetricsGauge)
 			clear(metricStore.MetricsCounter)
-			i = 0
 		}
-		time.Sleep(time.Second * time.Duration(conf.PollInterval))
 	}
 }
 
@@ -75,14 +77,10 @@ func sendMetric(serverURL, metricType, metricName, value string) error {
 
 	resp, err := http.Post(requestStr, "text/plain", nil)
 	if err != nil {
-		// log.Println(requestStr)
-		// log.Println(err)
 		return fmt.Errorf("error on %s : %w", requestStr, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		// log.Println(requestStr)
-		// log.Println("Status from server:", resp.StatusCode)
 		return fmt.Errorf("bad response %v for request %s", resp.StatusCode, requestStr)
 	}
 	return nil
