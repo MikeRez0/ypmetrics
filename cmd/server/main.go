@@ -36,7 +36,10 @@ func run() error {
 	}
 
 	var ms = storage.NewMemStorage()
-	var h = handlers.NewMetricsHandler(ms)
+	h, err := handlers.NewMetricsHandler(ms)
+	if err != nil {
+		return fmt.Errorf("error creating handler: %w", err)
+	}
 	r := setupRouter(h)
 
 	err = r.Run(conf.HostString)
