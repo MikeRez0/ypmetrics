@@ -156,6 +156,4 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 		}
 		return
 	}
-
-	c.Status(http.StatusOK)
 }
