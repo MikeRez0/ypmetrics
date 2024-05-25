@@ -29,3 +29,23 @@ _golangci-lint-rm-unformatted-report: _golangci-lint-format-report
 .PHONY: golangci-lint-clean
 golangci-lint-clean:
 	sudo rm -rf ./golangci-lint 
+
+
+.PHONY: build-server
+build-server:
+	go build -o cmd/server/server cmd/server/*.go
+
+.PHONY: build-agent
+build-agent:
+	go build -o cmd/agent/agent cmd/agent/*.go
+
+.PHONY: test
+test:
+	go test ./...
+.PHONY: test-cover
+test:
+	go test ./... -cover
+
+.PHONY: yptest
+yptest: build-server build-agent
+	./../metricstest-darwin-amd64 -test.v -test.run=$(test) -binary-path cmd/server/server -agent-binary-path cmd/agent/agent -source-path=. -server-port=8888
