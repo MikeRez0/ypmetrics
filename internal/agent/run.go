@@ -1,14 +1,16 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
+	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
 
@@ -52,30 +54,34 @@ func report(metricStore *MetricStore, serverURL string) {
 	serverURL = "http://" + serverURL
 
 	metricType := storage.CounterType
-	for metricName, metric := range metricStore.MetricsCounter {
-		value := strconv.FormatInt(int64(metric), 10)
+	for metricName, val := range metricStore.MetricsCounter {
+		metric := handlers.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
-		err := sendMetric(serverURL, metricType, metricName, value)
+		err := sendMetricJSON(serverURL, metric)
 		if err != nil {
 			log.Println(err)
 		}
 	}
 
 	metricType = storage.GaugeType
-	for metricName, metric := range metricStore.MetricsGauge {
-		value := strconv.FormatFloat(float64(metric), 'f', 5, 64)
-
-		err := sendMetric(serverURL, metricType, metricName, value)
+	for metricName, val := range metricStore.MetricsGauge {
+		metric := handlers.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
+		err := sendMetricJSON(serverURL, metric)
 		if err != nil {
 			log.Println(err)
 		}
 	}
 }
 
-func sendMetric(serverURL, metricType, metricName, value string) error {
-	requestStr := serverURL + "/update/" + metricType + "/" + metricName + "/" + value
+func sendMetricJSON(serverURL string, metric handlers.Metrics) error {
+	requestStr := serverURL + "/update/"
 
-	resp, err := http.Post(requestStr, "text/plain", nil)
+	jsonStr, err := json.Marshal(metric)
+	if err != nil {
+		return fmt.Errorf("erron while json encode: %w", err)
+	}
+
+	resp, err := http.Post(requestStr, "application/json", bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return fmt.Errorf("error on %s : %w", requestStr, err)
 	}

@@ -9,6 +9,7 @@ import (
 
 type ConfigServer struct {
 	HostString string `env:"ADDRESS"`
+	LogLevel   string `env:"LOG_LEVEL"`
 }
 
 func NewConfigServer() (*ConfigServer, error) {
@@ -17,6 +18,7 @@ func NewConfigServer() (*ConfigServer, error) {
 
 	// cmd string params
 	flag.StringVar(&config.HostString, "a", `localhost:8080`, "HTTP server endpoint")
+	flag.StringVar(&config.LogLevel, "l", `info`, "Log level")
 	flag.Parse()
 
 	// environment override
