@@ -27,8 +27,10 @@ func setupRouter(h *handlers.MetricsHandler) *gin.Engine {
 	r.HandleMethodNotAllowed = true
 
 	r.GET("/", h.MetricListView)
-	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
-	r.GET("/value/:metricType/:metric", h.GetMetricGin)
+	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
+	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
+	r.POST("/update/", h.UpdateMetricJSON)
+	r.POST("/value/", h.GetMetricJSON)
 
 	return r
 }

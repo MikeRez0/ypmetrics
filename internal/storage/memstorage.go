@@ -32,8 +32,9 @@ func (ms *MemStorage) Metrics() (res []struct{ Name, Value string }) {
 	return res
 }
 
-func (ms *MemStorage) UpdateGauge(metric string, value GaugeValue) {
+func (ms *MemStorage) UpdateGauge(metric string, value GaugeValue) GaugeValue {
 	ms.MetricsGauge[metric] = value
+	return ms.MetricsGauge[metric]
 }
 
 func (ms *MemStorage) GetGauge(metric string) (GaugeValue, error) {
@@ -44,12 +45,13 @@ func (ms *MemStorage) GetGauge(metric string) (GaugeValue, error) {
 	}
 }
 
-func (ms *MemStorage) UpdateCounter(metric string, value CounterValue) {
+func (ms *MemStorage) UpdateCounter(metric string, value CounterValue) CounterValue {
 	var m, ok = ms.MetricsCounter[metric]
 	if !ok {
 		m = 0
 	}
 	ms.MetricsCounter[metric] = m + value
+	return ms.MetricsCounter[metric]
 }
 
 func (ms *MemStorage) GetCounter(metric string) (CounterValue, error) {

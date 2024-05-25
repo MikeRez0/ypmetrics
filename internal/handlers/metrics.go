@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (mh *MetricsHandler) UpdateMetricGin(c *gin.Context) {
+func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 	var (
 		metricType = c.Param("metricType")
 		metric     = c.Param("metric")
@@ -44,7 +44,7 @@ func (mh *MetricsHandler) UpdateMetricGin(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (mh *MetricsHandler) GetMetricGin(c *gin.Context) {
+func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 	var (
 		metricType = c.Param("metricType")
 		metric     = c.Param("metric")
@@ -85,6 +85,77 @@ func (mh *MetricsHandler) GetMetricGin(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", "text/plain")
+
+	c.Status(http.StatusOK)
+}
+
+func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
+	var metric Metrics
+	if err := c.ShouldBindJSON(&metric); err != nil {
+		_ = c.Error(err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if metric.ID == "" {
+		c.AbortWithStatus(http.StatusNotFound)
+	}
+
+	switch metric.MType {
+	case storage.GaugeType:
+		var newVal = float64(mh.Store.UpdateGauge(metric.ID, storage.GaugeValue(*metric.Value)))
+		metric.Value = &newVal
+	case storage.CounterType:
+		var newVal = int64(mh.Store.UpdateCounter(metric.ID, storage.CounterValue(*metric.Delta)))
+		metric.Delta = &newVal
+	default:
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	c.JSON(http.StatusOK, metric)
+}
+
+func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
+	var metric Metrics
+	if err := c.ShouldBindJSON(&metric); err != nil {
+		_ = c.Error(err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if metric.ID == "" {
+		c.AbortWithStatus(http.StatusNotFound)
+	}
+
+	switch metric.MType {
+	case storage.GaugeType:
+		value, err := mh.Store.GetGauge(metric.ID)
+		if err != nil {
+			err = c.AbortWithError(http.StatusNotFound, err)
+			log.Println(err)
+			return
+		}
+		metric.Value = (*float64)(&value)
+		c.JSON(http.StatusOK, metric)
+
+	case storage.CounterType:
+		value, err := mh.Store.GetCounter(metric.ID)
+		if err != nil {
+			err = c.AbortWithError(http.StatusNotFound, err)
+			log.Println(err)
+			return
+		}
+		metric.Delta = (*int64)(&value)
+		c.JSON(http.StatusOK, metric)
+	default:
+		err := c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metric.MType))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
+	}
 
 	c.Status(http.StatusOK)
 }
