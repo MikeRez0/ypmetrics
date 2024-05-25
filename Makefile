@@ -43,7 +43,7 @@ build-agent:
 test:
 	go test ./...
 .PHONY: test-cover
-test:
+test-cover: test
 	go test ./... -cover
 
 .PHONY: yptest
