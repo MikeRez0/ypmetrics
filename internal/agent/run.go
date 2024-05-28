@@ -81,7 +81,15 @@ func sendMetricJSON(serverURL string, metric handlers.Metrics) error {
 		return fmt.Errorf("erron while json encode: %w", err)
 	}
 
-	resp, err := http.Post(requestStr, "application/json", bytes.NewBuffer(jsonStr))
+	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return fmt.Errorf("error on %s : %w", requestStr, err)
+	}
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	// http.Post(requestStr, "application/json", bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return fmt.Errorf("error on %s : %w", requestStr, err)
 	}

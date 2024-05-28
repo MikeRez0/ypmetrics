@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
@@ -24,13 +25,17 @@ func setupRouter(h *handlers.MetricsHandler) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(logger.GinLogger())
+	// r.Use(handlers.GinCompress())
 	r.HandleMethodNotAllowed = true
 
-	r.GET("/", h.MetricListView)
+	// не получилось использовать свой мидлвар, потому что в ответ
+	// встраивалось application/x-gzip, игнорируя "мои" заголовки
+	// обсудить на 1-1
+	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
 	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
-	r.POST("/update/", h.UpdateMetricJSON)
-	r.POST("/value/", h.GetMetricJSON)
+	r.POST("/update/", handlers.GinCompress(), h.UpdateMetricJSON)
+	r.POST("/value/", handlers.GinCompress(), h.GetMetricJSON)
 
 	return r
 }
