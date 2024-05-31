@@ -39,7 +39,6 @@ func (ms *MemStorage) Metrics() (res []model.Metrics) {
 }
 
 func (ms *MemStorage) StoreMetric(metric model.Metrics) error {
-
 	switch metric.MType {
 	case model.CounterType:
 		ms.MetricsCounter[metric.ID] = model.CounterValue(*metric.Delta)

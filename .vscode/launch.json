@@ -23,13 +23,13 @@
       "env": { "ADDRESS": "localhost:8888" }
     },
     {
-      "name": "Launch server (filestore sync)",
+      "name": "Launch server (filestore)",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "dlvFlags": ["--check-go-version=false"],
       "program": "${workspaceFolder}/cmd/server",
-      "args": ["-f", "./.tmp/metrics-db.json", "-i", "0"],
+      "args": ["-f", "./.tmp/metrics-db.json", "-i", "10", "-r=false"],
       "env": { "ADDRESS": "localhost:8888" }
     },
     {

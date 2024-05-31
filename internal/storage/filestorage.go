@@ -35,13 +35,10 @@ func NewFileStorage(filename string, saveInterval int, restore bool) (*FileStora
 	if !fs.syncSave {
 		ticker := time.NewTicker(time.Duration(saveInterval) * time.Second)
 		go func() {
-			for { //nolint:gosimple //for without break
-				select {
-				case <-ticker.C:
-					err := fs.WriteMetrics()
-					if err != nil {
-						logger.Log.Error("error writing async metrics", zap.Error(err))
-					}
+			for range ticker.C {
+				err := fs.WriteMetrics()
+				if err != nil {
+					logger.Log.Error("error writing async metrics", zap.Error(err))
 				}
 			}
 		}()
