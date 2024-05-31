@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -16,11 +17,11 @@ func TestMetricsHandler_Server(t *testing.T) {
 
 		cval, err := store.UpdateCounter("MetricCounter", 5)
 		assert.NoError(t, err)
-		assert.Equal(t, 5, cval)
+		assert.Equal(t, model.CounterValue(5), cval)
 
 		gval, err := store.UpdateGauge("MetricGauge", 10)
 		assert.NoError(t, err)
-		assert.Equal(t, 10, gval)
+		assert.Equal(t, model.GaugeValue(10), gval)
 
 		return store
 	}

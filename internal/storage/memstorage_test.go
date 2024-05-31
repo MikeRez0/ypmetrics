@@ -43,7 +43,7 @@ func TestMemStorage_UpdateGauge(t *testing.T) { //nolint:dupl //false positive
 
 	val, err = ms.UpdateGauge(testMetricGauge, 5)
 	assert.NoError(t, err)
-	assert.Equal(t, model.GaugeValue(1), val)
+	assert.Equal(t, model.GaugeValue(5), val)
 
 	val, err = ms.GetGauge(testMetricGauge)
 	assert.NoError(t, err)
