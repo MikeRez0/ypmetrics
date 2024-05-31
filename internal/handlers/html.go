@@ -9,7 +9,7 @@ import (
 )
 
 func (mh *MetricsHandler) MetricListView(c *gin.Context) {
-	metrics := mh.Store.Metrics()
+	metrics := mh.Store.MetricStrings()
 
 	// Обсудить на 1-1 эту строку. Если ее поставить после ExecuteTemplate, то все "ломается"
 	c.Writer.Header().Set("Content-Type", "text/html")

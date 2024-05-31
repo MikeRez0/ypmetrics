@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 type Repository interface {
-	Metrics() []struct{ Name, Value string }
-	UpdateGauge(metric string, value storage.GaugeValue) storage.GaugeValue
-	GetGauge(metric string) (storage.GaugeValue, error)
-	UpdateCounter(metric string, value storage.CounterValue) storage.CounterValue
-	GetCounter(metric string) (storage.CounterValue, error)
+	Metrics() []model.Metrics
+	MetricStrings() []struct{ Name, Value string }
+	StoreMetric(metric model.Metrics) error
+	UpdateGauge(metric string, value model.GaugeValue) (model.GaugeValue, error)
+	GetGauge(metric string) (model.GaugeValue, error)
+	UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error)
+	GetCounter(metric string) (model.CounterValue, error)
 }
 
 type MetricsHandler struct {

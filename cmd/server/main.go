@@ -51,8 +51,20 @@ func run() error {
 		return fmt.Errorf("init logger: %w", err)
 	}
 
-	var ms = storage.NewMemStorage()
-	h, err := handlers.NewMetricsHandler(ms)
+	var repo handlers.Repository
+
+	if conf.FileStoragePath != "" {
+		repo, err = storage.NewFileStorage(
+			conf.FileStoragePath,
+			conf.StoreInterval,
+			conf.Restore)
+		if err != nil {
+			return fmt.Errorf("error creating file repo: %w", err)
+		}
+	} else {
+		repo = storage.NewMemStorage()
+	}
+	h, err := handlers.NewMetricsHandler(repo)
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
 	}

@@ -3,7 +3,7 @@ package agent
 import (
 	"runtime"
 
-	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 var runtimeMetricNames []string = []string{
@@ -21,33 +21,33 @@ func ReadRuntimeMetrics(metrics *MetricStore) *MetricStore {
 
 	runtime.ReadMemStats(&memStats)
 
-	metrics.PushGaugeMetric(`Alloc`, storage.GaugeValue(memStats.Alloc))
-	metrics.PushGaugeMetric(`BuckHashSys`, storage.GaugeValue(memStats.BuckHashSys))
-	metrics.PushGaugeMetric(`Frees`, storage.GaugeValue(memStats.Frees))
-	metrics.PushGaugeMetric(`GCCPUFraction`, storage.GaugeValue(memStats.GCCPUFraction))
-	metrics.PushGaugeMetric(`GCSys`, storage.GaugeValue(memStats.GCSys))
-	metrics.PushGaugeMetric(`HeapAlloc`, storage.GaugeValue(memStats.HeapAlloc))
-	metrics.PushGaugeMetric(`HeapIdle`, storage.GaugeValue(memStats.HeapIdle))
-	metrics.PushGaugeMetric(`HeapInuse`, storage.GaugeValue(memStats.HeapInuse))
-	metrics.PushGaugeMetric(`HeapObjects`, storage.GaugeValue(memStats.HeapObjects))
-	metrics.PushGaugeMetric(`HeapReleased`, storage.GaugeValue(memStats.HeapReleased))
-	metrics.PushGaugeMetric(`HeapSys`, storage.GaugeValue(memStats.HeapSys))
-	metrics.PushGaugeMetric(`LastGC`, storage.GaugeValue(memStats.LastGC))
-	metrics.PushGaugeMetric(`Lookups`, storage.GaugeValue(memStats.Lookups))
-	metrics.PushGaugeMetric(`MCacheInuse`, storage.GaugeValue(memStats.MCacheInuse))
-	metrics.PushGaugeMetric(`MCacheSys`, storage.GaugeValue(memStats.MCacheSys))
-	metrics.PushGaugeMetric(`MSpanInuse`, storage.GaugeValue(memStats.MSpanInuse))
-	metrics.PushGaugeMetric(`MSpanSys`, storage.GaugeValue(memStats.MSpanSys))
-	metrics.PushGaugeMetric(`Mallocs`, storage.GaugeValue(memStats.Mallocs))
-	metrics.PushGaugeMetric(`NextGC`, storage.GaugeValue(memStats.NextGC))
-	metrics.PushGaugeMetric(`NumForcedGC`, storage.GaugeValue(memStats.NumForcedGC))
-	metrics.PushGaugeMetric(`NumGC`, storage.GaugeValue(memStats.NumGC))
-	metrics.PushGaugeMetric(`OtherSys`, storage.GaugeValue(memStats.OtherSys))
-	metrics.PushGaugeMetric(`PauseTotalNs`, storage.GaugeValue(memStats.PauseTotalNs))
-	metrics.PushGaugeMetric(`StackInuse`, storage.GaugeValue(memStats.StackInuse))
-	metrics.PushGaugeMetric(`StackSys`, storage.GaugeValue(memStats.StackSys))
-	metrics.PushGaugeMetric(`Sys`, storage.GaugeValue(memStats.Sys))
-	metrics.PushGaugeMetric(`TotalAlloc`, storage.GaugeValue(memStats.TotalAlloc))
+	metrics.PushGaugeMetric(`Alloc`, model.GaugeValue(memStats.Alloc))
+	metrics.PushGaugeMetric(`BuckHashSys`, model.GaugeValue(memStats.BuckHashSys))
+	metrics.PushGaugeMetric(`Frees`, model.GaugeValue(memStats.Frees))
+	metrics.PushGaugeMetric(`GCCPUFraction`, model.GaugeValue(memStats.GCCPUFraction))
+	metrics.PushGaugeMetric(`GCSys`, model.GaugeValue(memStats.GCSys))
+	metrics.PushGaugeMetric(`HeapAlloc`, model.GaugeValue(memStats.HeapAlloc))
+	metrics.PushGaugeMetric(`HeapIdle`, model.GaugeValue(memStats.HeapIdle))
+	metrics.PushGaugeMetric(`HeapInuse`, model.GaugeValue(memStats.HeapInuse))
+	metrics.PushGaugeMetric(`HeapObjects`, model.GaugeValue(memStats.HeapObjects))
+	metrics.PushGaugeMetric(`HeapReleased`, model.GaugeValue(memStats.HeapReleased))
+	metrics.PushGaugeMetric(`HeapSys`, model.GaugeValue(memStats.HeapSys))
+	metrics.PushGaugeMetric(`LastGC`, model.GaugeValue(memStats.LastGC))
+	metrics.PushGaugeMetric(`Lookups`, model.GaugeValue(memStats.Lookups))
+	metrics.PushGaugeMetric(`MCacheInuse`, model.GaugeValue(memStats.MCacheInuse))
+	metrics.PushGaugeMetric(`MCacheSys`, model.GaugeValue(memStats.MCacheSys))
+	metrics.PushGaugeMetric(`MSpanInuse`, model.GaugeValue(memStats.MSpanInuse))
+	metrics.PushGaugeMetric(`MSpanSys`, model.GaugeValue(memStats.MSpanSys))
+	metrics.PushGaugeMetric(`Mallocs`, model.GaugeValue(memStats.Mallocs))
+	metrics.PushGaugeMetric(`NextGC`, model.GaugeValue(memStats.NextGC))
+	metrics.PushGaugeMetric(`NumForcedGC`, model.GaugeValue(memStats.NumForcedGC))
+	metrics.PushGaugeMetric(`NumGC`, model.GaugeValue(memStats.NumGC))
+	metrics.PushGaugeMetric(`OtherSys`, model.GaugeValue(memStats.OtherSys))
+	metrics.PushGaugeMetric(`PauseTotalNs`, model.GaugeValue(memStats.PauseTotalNs))
+	metrics.PushGaugeMetric(`StackInuse`, model.GaugeValue(memStats.StackInuse))
+	metrics.PushGaugeMetric(`StackSys`, model.GaugeValue(memStats.StackSys))
+	metrics.PushGaugeMetric(`Sys`, model.GaugeValue(memStats.Sys))
+	metrics.PushGaugeMetric(`TotalAlloc`, model.GaugeValue(memStats.TotalAlloc))
 
 	return metrics
 }

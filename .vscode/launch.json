@@ -10,7 +10,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${fileDirname}",
-      "dlvFlags": ["--check-go-version=false"],
+      "dlvFlags": ["--check-go-version=false"]
     },
     {
       "name": "Launch server",
@@ -23,13 +23,23 @@
       "env": { "ADDRESS": "localhost:8888" }
     },
     {
-      "name": "Launch server no flags",
+      "name": "Launch server (filestore sync)",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "dlvFlags": ["--check-go-version=false"],
       "program": "${workspaceFolder}/cmd/server",
-      // "args": ["-a", "localhost:8881"],
+      "args": ["-f", "./.tmp/metrics-db.json", "-i", "0"],
+      "env": { "ADDRESS": "localhost:8888" }
+    },
+    {
+      "name": "Launch server (filestore read)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "dlvFlags": ["--check-go-version=false"],
+      "program": "${workspaceFolder}/cmd/server",
+      "args": ["-f", "./.tmp/metrics-db.json", "-i", "0", "-r", "true"],
       "env": { "ADDRESS": "localhost:8888" }
     },
     {
@@ -40,7 +50,7 @@
       "dlvFlags": ["--check-go-version=false"],
       "program": "${workspaceFolder}/cmd/agent",
       "args": ["-a", "localhost:8885"],
-      "env": { "ADDRESS": "localhost:8888" },
+      "env": { "ADDRESS": "localhost:8888" }
     }
   ]
 }

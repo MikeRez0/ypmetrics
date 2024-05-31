@@ -26,3 +26,6 @@ vendor/
 
 #golangci-lint
 golangci-lint/
+
+#Temp files
+.tmp

@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/logger"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
@@ -22,20 +24,20 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 	}
 
 	switch metricType {
-	case storage.GaugeType:
+	case model.GaugeType:
 		value, err := strconv.ParseFloat(valueRaw, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		mh.Store.UpdateGauge(metric, storage.GaugeValue(value))
-	case storage.CounterType:
+		mh.Store.UpdateGauge(metric, model.GaugeValue(value))
+	case model.CounterType:
 		value, err := strconv.ParseInt(valueRaw, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		mh.Store.UpdateCounter(metric, storage.CounterValue(value))
+		mh.Store.UpdateCounter(metric, model.CounterValue(value))
 	default:
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -51,7 +53,7 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 	)
 
 	switch metricType {
-	case storage.GaugeType:
+	case model.GaugeType:
 		value, err := mh.Store.GetGauge(metric)
 		if err != nil {
 			err = c.AbortWithError(http.StatusNotFound, err)
@@ -63,7 +65,7 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 			log.Println(err)
 			return
 		}
-	case storage.CounterType:
+	case model.CounterType:
 		value, err := mh.Store.GetCounter(metric)
 		if err != nil {
 			err = c.AbortWithError(http.StatusNotFound, err)
@@ -90,7 +92,7 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 }
 
 func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
-	var metric Metrics
+	var metric model.Metrics
 	if err := c.ShouldBindJSON(&metric); err != nil {
 		_ = c.Error(err)
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -102,11 +104,23 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 	}
 
 	switch metric.MType {
-	case storage.GaugeType:
-		var newVal = float64(mh.Store.UpdateGauge(metric.ID, storage.GaugeValue(*metric.Value)))
+	case model.GaugeType:
+		v, err := mh.Store.UpdateGauge(metric.ID, model.GaugeValue(*metric.Value))
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error(fmt.Sprintf("Error updating metric %s", metric.ID), zap.Error(err))
+			return
+		}
+		var newVal = float64(v)
 		metric.Value = &newVal
-	case storage.CounterType:
-		var newVal = int64(mh.Store.UpdateCounter(metric.ID, storage.CounterValue(*metric.Delta)))
+	case model.CounterType:
+		v, err := mh.Store.UpdateCounter(metric.ID, model.CounterValue(*metric.Delta))
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error(fmt.Sprintf("Error updating metric %s", metric.ID), zap.Error(err))
+			return
+		}
+		var newVal = int64(v)
 		metric.Delta = &newVal
 	default:
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -117,7 +131,7 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 }
 
 func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
-	var metric Metrics
+	var metric model.Metrics
 	if err := c.ShouldBindJSON(&metric); err != nil {
 		_ = c.Error(err)
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -129,7 +143,7 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	}
 
 	switch metric.MType {
-	case storage.GaugeType:
+	case model.GaugeType:
 		value, err := mh.Store.GetGauge(metric.ID)
 		if err != nil {
 			err = c.AbortWithError(http.StatusNotFound, err)
@@ -139,7 +153,7 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 		metric.Value = (*float64)(&value)
 		c.JSON(http.StatusOK, metric)
 
-	case storage.CounterType:
+	case model.CounterType:
 		value, err := mh.Store.GetCounter(metric.ID)
 		if err != nil {
 			err = c.AbortWithError(http.StatusNotFound, err)

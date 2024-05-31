@@ -1,4 +1,10 @@
-package handlers
+package model
+
+const GaugeType = "gauge"
+const CounterType = "counter"
+
+type GaugeValue float64
+type CounterValue int64
 
 type Metrics struct { //nolint:govet //external rule from course author
 	ID    string   `json:"id"`              // имя метрики

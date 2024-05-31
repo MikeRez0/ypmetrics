@@ -48,4 +48,4 @@ test-cover: test
 
 .PHONY: yptest
 yptest: build-server build-agent
-	./../metricstest-darwin-amd64 -test.v -test.run=$(test) -binary-path cmd/server/server -agent-binary-path cmd/agent/agent -source-path=. -server-port=8888
+	./../metricstest-darwin-amd64 -test.v -test.run=$(test) -binary-path cmd/server/server -agent-binary-path cmd/agent/agent -source-path=. -server-port=8888 -file-storage-path=./.tmp/metrics.json
