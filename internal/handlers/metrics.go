@@ -30,14 +30,22 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		mh.Store.UpdateGauge(metric, model.GaugeValue(value))
+		_, err = mh.Store.UpdateGauge(metric, model.GaugeValue(value))
+		if err != nil {
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error("error on guage update", zap.Error(err))
+		}
 	case model.CounterType:
 		value, err := strconv.ParseInt(valueRaw, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		mh.Store.UpdateCounter(metric, model.CounterValue(value))
+		_, err = mh.Store.UpdateCounter(metric, model.CounterValue(value))
+		if err != nil {
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error("error on counter update", zap.Error(err))
+		}
 	default:
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -57,12 +65,13 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 		value, err := mh.Store.GetGauge(metric)
 		if err != nil {
 			err = c.AbortWithError(http.StatusNotFound, err)
-			log.Println(err)
+			logger.Log.Error("error on get metric", zap.Error(err))
 			return
 		}
 		_, err = c.Writer.WriteString(strconv.FormatFloat(float64(value), 'f', -1, 64))
 		if err != nil {
-			log.Println(err)
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error("error on get metric", zap.Error(err))
 			return
 		}
 	case model.CounterType:
@@ -74,13 +83,14 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 		}
 		_, err = c.Writer.WriteString(strconv.FormatInt(int64(value), 10))
 		if err != nil {
-			log.Println(err)
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error("error on get metric", zap.Error(err))
 			return
 		}
 	default:
 		err := c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metricType))
 		if err != nil {
-			log.Println(err)
+			logger.Log.Error("metric type not found", zap.Error(err))
 			return
 		}
 		return
@@ -107,8 +117,8 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 	case model.GaugeType:
 		v, err := mh.Store.UpdateGauge(metric.ID, model.GaugeValue(*metric.Value))
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error(fmt.Sprintf("Error updating metric %s", metric.ID), zap.Error(err))
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error("Error updating metric "+metric.ID, zap.Error(err))
 			return
 		}
 		var newVal = float64(v)
@@ -116,8 +126,8 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 	case model.CounterType:
 		v, err := mh.Store.UpdateCounter(metric.ID, model.CounterValue(*metric.Delta))
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error(fmt.Sprintf("Error updating metric %s", metric.ID), zap.Error(err))
+			err = c.AbortWithError(http.StatusInternalServerError, err)
+			logger.Log.Error("Error updating metric "+metric.ID, zap.Error(err))
 			return
 		}
 		var newVal = int64(v)

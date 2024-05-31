@@ -14,8 +14,13 @@ func TestMetricsHandler_Server(t *testing.T) {
 	testMemStorage := func() *storage.MemStorage {
 		store := storage.NewMemStorage()
 
-		store.UpdateCounter("MetricCounter", 5)
-		store.UpdateGauge("MetricGauge", 10)
+		cval, err := store.UpdateCounter("MetricCounter", 5)
+		assert.NoError(t, err)
+		assert.Equal(t, 5, cval)
+
+		gval, err := store.UpdateGauge("MetricGauge", 10)
+		assert.NoError(t, err)
+		assert.Equal(t, 10, gval)
 
 		return store
 	}
