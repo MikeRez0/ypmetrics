@@ -8,13 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
-var Log *zap.Logger = zap.NewNop()
+// var Log *zap.Logger = zap.NewNop()
 
-func Initialize(level string) error {
+func Initialize(level string) (*zap.Logger, error) {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("failed to parse the atomic level %s: %w", level, err)
 	}
 	// создаём новую конфигурацию логера
 	cfg := zap.NewProductionConfig()
@@ -23,20 +23,20 @@ func Initialize(level string) error {
 	// создаём логер на основе конфигурации
 	zl, err := cfg.Build()
 	if err != nil {
-		return fmt.Errorf("bad logger config: %w", err)
+		return nil, fmt.Errorf("bad logger config: %w", err)
 	}
 	// устанавливаем синглтон
-	Log = zl
-	return nil
+	// Log = zl
+	return zl, nil
 }
 
-func GinLogger() gin.HandlerFunc {
+func GinLogger(log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
 
 		c.Next()
 
-		Log.Info("Incoming HTTP request",
+		log.Info("Incoming HTTP request",
 			zap.String("method", c.Request.Method),
 			zap.String("path", c.Request.RequestURI),
 			zap.Int("status", c.Writer.Status()),

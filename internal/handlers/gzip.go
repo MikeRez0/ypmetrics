@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-func GinCompress() gin.HandlerFunc {
+func GinCompress(log *zap.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ow := ctx.Writer
 
@@ -29,8 +30,9 @@ func GinCompress() gin.HandlerFunc {
 		if sendsGzip {
 			cr, err := newCompressReader(ctx.Request.Body)
 			if err != nil {
-				_ = ctx.AbortWithError(http.StatusInternalServerError,
+				err = ctx.AbortWithError(http.StatusInternalServerError,
 					fmt.Errorf("error decompressing request: %w", err))
+				log.Error("error creating compress reader", zap.Error(err))
 				return
 			}
 			ctx.Request.Body = cr

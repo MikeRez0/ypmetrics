@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -21,6 +20,7 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 
 	if metric == "" {
 		c.AbortWithStatus(http.StatusNotFound)
+		return
 	}
 
 	switch metricType {
@@ -33,7 +33,8 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 		_, err = mh.Store.UpdateGauge(metric, model.GaugeValue(value))
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error("error on guage update", zap.Error(err))
+			mh.Log.Error("error on guage update", zap.Error(err))
+			return
 		}
 	case model.CounterType:
 		value, err := strconv.ParseInt(valueRaw, 10, 64)
@@ -44,7 +45,8 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 		_, err = mh.Store.UpdateCounter(metric, model.CounterValue(value))
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error("error on counter update", zap.Error(err))
+			mh.Log.Error("error on counter update", zap.Error(err))
+			return
 		}
 	default:
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -65,13 +67,13 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 		value, err := mh.Store.GetGauge(metric)
 		if err != nil {
 			err = c.AbortWithError(http.StatusNotFound, err)
-			logger.Log.Error("error on get metric", zap.Error(err))
+			mh.Log.Error("error on get metric", zap.Error(err))
 			return
 		}
 		_, err = c.Writer.WriteString(strconv.FormatFloat(float64(value), 'f', -1, 64))
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error("error on get metric", zap.Error(err))
+			mh.Log.Error("error on get metric", zap.Error(err))
 			return
 		}
 	case model.CounterType:
@@ -84,13 +86,13 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 		_, err = c.Writer.WriteString(strconv.FormatInt(int64(value), 10))
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error("error on get metric", zap.Error(err))
+			mh.Log.Error("error on get metric", zap.Error(err))
 			return
 		}
 	default:
 		err := c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metricType))
 		if err != nil {
-			logger.Log.Error("metric type not found", zap.Error(err))
+			mh.Log.Error("metric type not found", zap.Error(err))
 			return
 		}
 		return
@@ -118,7 +120,7 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 		v, err := mh.Store.UpdateGauge(metric.ID, model.GaugeValue(*metric.Value))
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error("Error updating metric "+metric.ID, zap.Error(err))
+			mh.Log.Error("Error updating metric "+metric.ID, zap.Error(err))
 			return
 		}
 		var newVal = float64(v)
@@ -127,7 +129,7 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 		v, err := mh.Store.UpdateCounter(metric.ID, model.CounterValue(*metric.Delta))
 		if err != nil {
 			err = c.AbortWithError(http.StatusInternalServerError, err)
-			logger.Log.Error("Error updating metric "+metric.ID, zap.Error(err))
+			mh.Log.Error("Error updating metric ", zap.String("MetricID", metric.ID), zap.Error(err))
 			return
 		}
 		var newVal = int64(v)
@@ -156,8 +158,7 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	case model.GaugeType:
 		value, err := mh.Store.GetGauge(metric.ID)
 		if err != nil {
-			err = c.AbortWithError(http.StatusNotFound, err)
-			log.Println(err)
+			_ = c.AbortWithError(http.StatusNotFound, err)
 			return
 		}
 		metric.Value = (*float64)(&value)
@@ -173,11 +174,7 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 		metric.Delta = (*int64)(&value)
 		c.JSON(http.StatusOK, metric)
 	default:
-		err := c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metric.MType))
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		_ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metric.MType))
 		return
 	}
 }

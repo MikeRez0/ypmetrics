@@ -6,6 +6,7 @@ import (
 	"html/template"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"go.uber.org/zap"
 )
 
 type Repository interface {
@@ -21,12 +22,13 @@ type Repository interface {
 type MetricsHandler struct {
 	Store    Repository
 	Template *template.Template
+	Log      *zap.Logger
 }
 
 //go:embed "templates/metrics.html"
 var templateContent string
 
-func NewMetricsHandler(s Repository) (*MetricsHandler, error) {
+func NewMetricsHandler(s Repository, log *zap.Logger) (*MetricsHandler, error) {
 	tmpl := template.New("metrics")
 	var err error
 	tmpl, err = tmpl.Parse(templateContent)
@@ -34,5 +36,5 @@ func NewMetricsHandler(s Repository) (*MetricsHandler, error) {
 		return nil, fmt.Errorf("error while parsing template: %w", err)
 	}
 
-	return &MetricsHandler{Store: s, Template: tmpl}, nil
+	return &MetricsHandler{Store: s, Template: tmpl, Log: log}, nil
 }

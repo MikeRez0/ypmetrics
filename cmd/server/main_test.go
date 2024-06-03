@@ -9,6 +9,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestMetricsHandler_Server(t *testing.T) {
@@ -30,7 +31,7 @@ func TestMetricsHandler_Server(t *testing.T) {
 		Store: testMemStorage(),
 	}
 
-	router := setupRouter(mh)
+	router := setupRouter(mh, zap.L())
 	srv := httptest.NewServer(router)
 
 	tests := getTestData()

@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-contrib/gzip"
@@ -17,15 +18,15 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		logger.Log.Fatal("Fatal error", zap.Error(err))
+		// no custom logger at this line
+		log.Fatalf("Fatal error: %v", err)
 	}
 }
 
-func setupRouter(h *handlers.MetricsHandler) *gin.Engine {
+func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(logger.GinLogger())
-	// r.Use(handlers.GinCompress())
+	r.Use(logger.GinLogger(mylog))
 	r.HandleMethodNotAllowed = true
 
 	// не получилось использовать свой мидлвар, потому что в ответ
@@ -34,8 +35,8 @@ func setupRouter(h *handlers.MetricsHandler) *gin.Engine {
 	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
 	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
-	r.POST("/update/", handlers.GinCompress(), h.UpdateMetricJSON)
-	r.POST("/value/", handlers.GinCompress(), h.GetMetricJSON)
+	r.POST("/update/", handlers.GinCompress(mylog), h.UpdateMetricJSON)
+	r.POST("/value/", handlers.GinCompress(mylog), h.GetMetricJSON)
 
 	return r
 }
@@ -46,7 +47,7 @@ func run() error {
 		return fmt.Errorf("error while config load: %w", err)
 	}
 
-	err = logger.Initialize(conf.LogLevel)
+	mylog, err := logger.Initialize(conf.LogLevel)
 	if err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
@@ -57,18 +58,19 @@ func run() error {
 		repo, err = storage.NewFileStorage(
 			conf.FileStoragePath,
 			conf.StoreInterval,
-			conf.Restore)
+			conf.Restore,
+			mylog)
 		if err != nil {
 			return fmt.Errorf("error creating file repo: %w", err)
 		}
 	} else {
 		repo = storage.NewMemStorage()
 	}
-	h, err := handlers.NewMetricsHandler(repo)
+	h, err := handlers.NewMetricsHandler(repo, mylog)
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
-	r := setupRouter(h)
+	r := setupRouter(h, mylog)
 
 	err = r.Run(conf.HostString)
 	if !errors.Is(err, http.ErrServerClosed) {

@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"go.uber.org/zap"
 )
@@ -16,13 +15,15 @@ type FileStorage struct {
 	MemStorage
 	filename string
 	syncSave bool
+	log      *zap.Logger
 }
 
-func NewFileStorage(filename string, saveInterval int, restore bool) (*FileStorage, error) {
+func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Logger) (*FileStorage, error) {
 	fs := FileStorage{
 		MemStorage: *NewMemStorage(),
 		filename:   filename,
 		syncSave:   saveInterval == 0,
+		log:        log,
 	}
 
 	if restore {
@@ -38,7 +39,7 @@ func NewFileStorage(filename string, saveInterval int, restore bool) (*FileStora
 			for range ticker.C {
 				err := fs.WriteMetrics()
 				if err != nil {
-					logger.Log.Error("error writing async metrics", zap.Error(err))
+					log.Error("error writing async metrics", zap.Error(err))
 				}
 			}
 		}()
@@ -73,7 +74,7 @@ func (fs *FileStorage) UpdateCounter(metric string, value model.CounterValue) (m
 }
 
 func (fs *FileStorage) WriteMetrics() error {
-	logger.Log.Info("Start writing metrics to file")
+	fs.log.Info("Start writing metrics to file")
 	file, err := os.OpenFile(fs.filename, os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("error opening file: %w", err)
@@ -81,7 +82,7 @@ func (fs *FileStorage) WriteMetrics() error {
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			logger.Log.Error("error while closing file", zap.Error(err))
+			fs.log.Error("error while closing file", zap.Error(err))
 		}
 	}()
 
@@ -94,12 +95,12 @@ func (fs *FileStorage) WriteMetrics() error {
 		}
 	}
 
-	logger.Log.Info("End writing metrics to file")
+	fs.log.Info("End writing metrics to file")
 	return nil
 }
 
 func (fs *FileStorage) ReadMetrics() error {
-	logger.Log.Info("Start reading metrics from file")
+	fs.log.Info("Start reading metrics from file")
 	file, err := os.OpenFile(fs.filename, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return fmt.Errorf("error while open file %s: %w", fs.filename, err)
@@ -107,7 +108,7 @@ func (fs *FileStorage) ReadMetrics() error {
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			logger.Log.Error("Error while closing file", zap.Error(err))
+			fs.log.Error("Error while closing file", zap.Error(err))
 		}
 	}()
 
@@ -126,6 +127,6 @@ func (fs *FileStorage) ReadMetrics() error {
 		}
 	}
 
-	logger.Log.Info("End reading metrics from file")
+	fs.log.Info("End reading metrics from file")
 	return nil
 }
