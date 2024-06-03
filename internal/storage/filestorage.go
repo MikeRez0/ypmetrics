@@ -13,9 +13,9 @@ import (
 
 type FileStorage struct {
 	MemStorage
+	log      *zap.Logger
 	filename string
 	syncSave bool
-	log      *zap.Logger
 }
 
 func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Logger) (*FileStorage, error) {

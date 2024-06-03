@@ -8,8 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// var Log *zap.Logger = zap.NewNop()
-
 func Initialize(level string) (*zap.Logger, error) {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
 	lvl, err := zap.ParseAtomicLevel(level)
@@ -26,7 +24,6 @@ func Initialize(level string) (*zap.Logger, error) {
 		return nil, fmt.Errorf("bad logger config: %w", err)
 	}
 	// устанавливаем синглтон
-	// Log = zl
 	return zl, nil
 }
 
