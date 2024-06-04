@@ -35,8 +35,11 @@ func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
 	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
-	r.POST("/update/", handlers.GinCompress(mylog), h.UpdateMetricJSON)
-	r.POST("/value/", handlers.GinCompress(mylog), h.GetMetricJSON)
+
+	jsonGroup := r.Group("/")
+	jsonGroup.Use(handlers.GinCompress(logger.LoggerWithComponent(mylog, "compress")))
+	jsonGroup.POST("/update/", h.UpdateMetricJSON)
+	jsonGroup.POST("/value/", h.GetMetricJSON)
 
 	return r
 }
@@ -59,18 +62,18 @@ func run() error {
 			conf.FileStoragePath,
 			conf.StoreInterval,
 			conf.Restore,
-			mylog)
+			logger.LoggerWithComponent(mylog, "filestorage"))
 		if err != nil {
 			return fmt.Errorf("error creating file repo: %w", err)
 		}
 	} else {
 		repo = storage.NewMemStorage()
 	}
-	h, err := handlers.NewMetricsHandler(repo, mylog)
+	h, err := handlers.NewMetricsHandler(repo, logger.LoggerWithComponent(mylog, "handlers"))
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
-	r := setupRouter(h, mylog)
+	r := setupRouter(h, logger.LoggerWithComponent(mylog, "handlers"))
 
 	err = r.Run(conf.HostString)
 	if !errors.Is(err, http.ErrServerClosed) {

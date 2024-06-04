@@ -41,3 +41,6 @@ func GinLogger(log *zap.Logger) gin.HandlerFunc {
 			zap.String("duration", time.Since(t).String()))
 	}
 }
+func LoggerWithComponent(logger *zap.Logger, name string) *zap.Logger {
+	return logger.With(zap.String("component", name))
+}
