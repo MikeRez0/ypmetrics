@@ -6,25 +6,40 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		// no custom logger at this line
+		log.Fatalf("Fatal error: %v", err)
 	}
 }
 
-func setupRouter(h *handlers.MetricsHandler) *gin.Engine {
-	r := gin.Default()
+func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(logger.GinLogger(mylog))
 	r.HandleMethodNotAllowed = true
-	r.GET("/", h.MetricListView)
-	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricGin)
-	r.GET("/value/:metricType/:metric", h.GetMetricGin)
+
+	// не получилось использовать свой мидлвар, потому что в ответ
+	// встраивалось application/x-gzip, игнорируя "мои" заголовки
+	// обсудить на 1-1
+	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
+	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
+	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
+
+	jsonGroup := r.Group("/")
+	jsonGroup.Use(handlers.GinCompress(logger.LoggerWithComponent(mylog, "compress")))
+	jsonGroup.POST("/update/", h.UpdateMetricJSON)
+	jsonGroup.POST("/value/", h.GetMetricJSON)
 
 	return r
 }
@@ -35,12 +50,30 @@ func run() error {
 		return fmt.Errorf("error while config load: %w", err)
 	}
 
-	var ms = storage.NewMemStorage()
-	h, err := handlers.NewMetricsHandler(ms)
+	mylog, err := logger.Initialize(conf.LogLevel)
+	if err != nil {
+		return fmt.Errorf("init logger: %w", err)
+	}
+
+	var repo handlers.Repository
+
+	if conf.FileStoragePath != "" {
+		repo, err = storage.NewFileStorage(
+			conf.FileStoragePath,
+			conf.StoreInterval,
+			conf.Restore,
+			logger.LoggerWithComponent(mylog, "filestorage"))
+		if err != nil {
+			return fmt.Errorf("error creating file repo: %w", err)
+		}
+	} else {
+		repo = storage.NewMemStorage()
+	}
+	h, err := handlers.NewMetricsHandler(repo, logger.LoggerWithComponent(mylog, "handlers"))
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
-	r := setupRouter(h)
+	r := setupRouter(h, logger.LoggerWithComponent(mylog, "handlers"))
 
 	err = r.Run(conf.HostString)
 	if !errors.Is(err, http.ErrServerClosed) {

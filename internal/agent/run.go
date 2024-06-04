@@ -1,15 +1,16 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
-	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 type Config struct {
@@ -44,38 +45,50 @@ func Run() error {
 func poll(metricStore *MetricStore) {
 	ReadRuntimeMetrics(metricStore)
 
-	metricStore.PushCounterMetric("PollCount", storage.CounterValue(1))
-	metricStore.PushGaugeMetric("RandomValue", storage.GaugeValue(rand.Float64()*1_000))
+	metricStore.PushCounterMetric("PollCount", model.CounterValue(1))
+	metricStore.PushGaugeMetric("RandomValue", model.GaugeValue(rand.Float64()*1_000))
 }
 
 func report(metricStore *MetricStore, serverURL string) {
 	serverURL = "http://" + serverURL
 
-	metricType := storage.CounterType
-	for metricName, metric := range metricStore.MetricsCounter {
-		value := strconv.FormatInt(int64(metric), 10)
+	metricType := model.CounterType
+	for metricName, val := range metricStore.MetricsCounter {
+		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
-		err := sendMetric(serverURL, metricType, metricName, value)
+		err := sendMetricJSON(serverURL, metric)
 		if err != nil {
 			log.Println(err)
 		}
 	}
 
-	metricType = storage.GaugeType
-	for metricName, metric := range metricStore.MetricsGauge {
-		value := strconv.FormatFloat(float64(metric), 'f', 5, 64)
-
-		err := sendMetric(serverURL, metricType, metricName, value)
+	metricType = model.GaugeType
+	for metricName, val := range metricStore.MetricsGauge {
+		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
+		err := sendMetricJSON(serverURL, metric)
 		if err != nil {
 			log.Println(err)
 		}
 	}
 }
 
-func sendMetric(serverURL, metricType, metricName, value string) error {
-	requestStr := serverURL + "/update/" + metricType + "/" + metricName + "/" + value
+func sendMetricJSON(serverURL string, metric model.Metrics) error {
+	requestStr := serverURL + "/update/"
 
-	resp, err := http.Post(requestStr, "text/plain", nil)
+	jsonStr, err := json.Marshal(metric)
+	if err != nil {
+		return fmt.Errorf("erron while json encode: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return fmt.Errorf("error on %s : %w", requestStr, err)
+	}
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	// http.Post(requestStr, "application/json", bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return fmt.Errorf("error on %s : %w", requestStr, err)
 	}

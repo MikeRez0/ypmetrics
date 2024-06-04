@@ -7,8 +7,12 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-type ConfigServer struct {
-	HostString string `env:"ADDRESS"`
+type ConfigServer struct { //nolint:govet //no need for opimization
+	HostString      string `env:"ADDRESS"`
+	LogLevel        string `env:"LOG_LEVEL"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
 }
 
 func NewConfigServer() (*ConfigServer, error) {
@@ -17,6 +21,10 @@ func NewConfigServer() (*ConfigServer, error) {
 
 	// cmd string params
 	flag.StringVar(&config.HostString, "a", `localhost:8080`, "HTTP server endpoint")
+	flag.StringVar(&config.LogLevel, "l", `info`, "Log level")
+	flag.IntVar(&config.StoreInterval, "i", 300, "File store interval, 0 - synchrose")
+	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "File store path, empty - without store")
+	flag.BoolVar(&config.Restore, "r", true, "Needs restore on start")
 	flag.Parse()
 
 	// environment override
