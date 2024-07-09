@@ -13,6 +13,7 @@ type ConfigServer struct { //nolint:govet //no need for opimization
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DSN             string `env:"DATABASE_DSN"`
 }
 
 func NewConfigServer() (*ConfigServer, error) {
@@ -25,6 +26,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	flag.IntVar(&config.StoreInterval, "i", 300, "File store interval, 0 - synchrose")
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "File store path, empty - without store")
 	flag.BoolVar(&config.Restore, "r", true, "Needs restore on start")
+	flag.StringVar(&config.DSN, "d", "", "Database string")
 	flag.Parse()
 
 	// environment override

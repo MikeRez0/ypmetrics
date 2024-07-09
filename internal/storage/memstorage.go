@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -93,4 +94,8 @@ func (ms *MemStorage) GetCounter(metric string) (model.CounterValue, error) {
 	} else {
 		return 0, fmt.Errorf("not found %s", metric)
 	}
+}
+
+func (fs *MemStorage) Ping() error {
+	return errors.New("Ping not supported")
 }
