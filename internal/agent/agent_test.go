@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,8 +23,8 @@ func Test_poll(t *testing.T) {
 }
 func Test_report(t *testing.T) {
 	ms := NewMetricStore()
-	ms.PushCounterMetric("TestCounter", storage.CounterValue(10))
-	ms.PushGaugeMetric("TestGauge", storage.GaugeValue(15))
+	ms.PushCounterMetric("TestCounter", model.CounterValue(10))
+	ms.PushGaugeMetric("TestGauge", model.GaugeValue(15))
 
 	tests := []struct {
 		name string

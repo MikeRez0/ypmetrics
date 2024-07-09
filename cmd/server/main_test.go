@@ -1,28 +1,28 @@
 package main
 
 import (
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestMetricsHandler_Server(t *testing.T) {
-	type want struct {
-		code        int
-		body        string
-		contentType string
-	}
-
 	testMemStorage := func() *storage.MemStorage {
 		store := storage.NewMemStorage()
 
-		store.UpdateCounter("MetricCounter", 5)
-		store.UpdateGauge("MetricGauge", 10)
+		cval, err := store.UpdateCounter("MetricCounter", 5)
+		assert.NoError(t, err)
+		assert.Equal(t, model.CounterValue(5), cval)
+
+		gval, err := store.UpdateGauge("MetricGauge", 10)
+		assert.NoError(t, err)
+		assert.Equal(t, model.GaugeValue(10), gval)
 
 		return store
 	}
@@ -31,86 +31,36 @@ func TestMetricsHandler_Server(t *testing.T) {
 		Store: testMemStorage(),
 	}
 
-	router := setupRouter(mh)
+	router := setupRouter(mh, zap.L())
 	srv := httptest.NewServer(router)
 
-	tests := []struct {
-		name    string
-		request string
-		method  string
-		want    want
-	}{
-		{
-			name:    "Pos update Gauge",
-			request: "/update/gauge/test/1",
-			method:  http.MethodPost,
-			want:    want{code: 200},
-		},
-		{
-			name:    "Pos udpate Counter",
-			request: "/update/counter/test2/1",
-			method:  http.MethodPost,
-			want:    want{code: 200},
-		},
-		{
-			name:    "Pos Get Counter",
-			request: "/value/counter/MetricCounter",
-			method:  http.MethodGet,
-			want:    want{code: 200, body: "5"},
-		},
-		{
-			name:    "Neg Get Counter",
-			request: "/value/counter/XXXMetricCounter",
-			method:  http.MethodGet,
-			want:    want{code: http.StatusNotFound},
-		},
-		{
-			name:    "Neg update Gauge",
-			request: "/update/gauge/test/xxx",
-			method:  http.MethodPost,
-			want:    want{code: 400},
-		},
-		{
-			name:    "Neg udpate Counter",
-			request: "/update/counter/test2/xxx",
-			method:  http.MethodPost,
-			want:    want{code: 400},
-		},
-		{
-			name:    "Neg udpate XXX",
-			request: "/update/XXX/test2/5",
-			method:  http.MethodPost,
-			want:    want{code: 400},
-		},
-		{
-			name:    "Neg udpate No metric",
-			request: "/update/counter/",
-			method:  http.MethodPost,
-			want:    want{code: 404},
-		},
-		{
-			name:    "Neg method not allowed",
-			request: "/update/counter/test/123",
-			method:  http.MethodPatch,
-			want:    want{code: http.StatusMethodNotAllowed},
-		},
-	}
+	tests := getTestData()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := resty.New().R()
 			req.Method = tt.method
 			req.URL = srv.URL + tt.request
+			if tt.requestBody != "" {
+				req.Body = tt.requestBody
+			}
+			if tt.contentType != "" {
+				req.SetHeader("Content-Type", tt.contentType)
+			}
 
 			res, err := req.Send()
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want.code, res.StatusCode())
 
 			if tt.want.body != "" {
-				assert.Equal(t, tt.want.body, string(res.Body()))
+				if tt.contentType != "application/json" {
+					assert.Equal(t, tt.want.body, string(res.Body()))
+				} else {
+					assert.JSONEq(t, tt.want.body, string(res.Body()))
+				}
 			}
 			if tt.want.contentType != "" {
-				assert.Equal(t, tt.want.contentType, res.Header().Get("Content-Type"))
+				assert.Contains(t, res.Header().Get("Content-Type"), tt.want.contentType)
 			}
 		})
 	}
