@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -69,6 +70,12 @@ func (fs *FileStorage) UpdateCounter(metric string, value model.CounterValue) (m
 	if err != nil {
 		return model.CounterValue(0), err
 	}
+	if fs.syncSave {
+		err = fs.WriteMetrics()
+		if err != nil {
+			return model.CounterValue(0), err
+		}
+	}
 
 	return val, nil
 }
@@ -129,4 +136,8 @@ func (fs *FileStorage) ReadMetrics() error {
 
 	fs.log.Info("End reading metrics from file")
 	return nil
+}
+
+func (fs *FileStorage) Ping() error {
+	return errors.New("Ping not supported")
 }

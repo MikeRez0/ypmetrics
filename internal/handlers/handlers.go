@@ -17,6 +17,7 @@ type Repository interface {
 	GetGauge(metric string) (model.GaugeValue, error)
 	UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error)
 	GetCounter(metric string) (model.CounterValue, error)
+	Ping() error
 }
 
 type MetricsHandler struct {
