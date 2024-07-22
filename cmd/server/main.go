@@ -60,6 +60,15 @@ func run() error {
 	var repo handlers.Repository
 
 	switch {
+	case conf.DSN != "":
+		repo, err = storage.NewDBStorage(
+			conf.DSN,
+			conf.StoreInterval,
+			conf.Restore,
+			logger.LoggerWithComponent(mylog, "dbstorage"))
+		if err != nil {
+			return fmt.Errorf("error creating db repo: %w", err)
+		}
 	case conf.FileStoragePath != "":
 		repo, err = storage.NewFileStorage(
 			conf.FileStoragePath,
@@ -68,11 +77,6 @@ func run() error {
 			logger.LoggerWithComponent(mylog, "filestorage"))
 		if err != nil {
 			return fmt.Errorf("error creating file repo: %w", err)
-		}
-	case conf.DSN != "":
-		repo, err = storage.NewDBStorage(conf.DSN, logger.LoggerWithComponent(mylog, "dbstorage"))
-		if err != nil {
-			return fmt.Errorf("error creating db repo: %w", err)
 		}
 	default:
 		repo = storage.NewMemStorage()

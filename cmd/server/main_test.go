@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -16,11 +17,11 @@ func TestMetricsHandler_Server(t *testing.T) {
 	testMemStorage := func() *storage.MemStorage {
 		store := storage.NewMemStorage()
 
-		cval, err := store.UpdateCounter("MetricCounter", 5)
+		cval, err := store.UpdateCounter(context.Background(), "MetricCounter", 5)
 		assert.NoError(t, err)
 		assert.Equal(t, model.CounterValue(5), cval)
 
-		gval, err := store.UpdateGauge("MetricGauge", 10)
+		gval, err := store.UpdateGauge(context.Background(), "MetricGauge", 10)
 		assert.NoError(t, err)
 		assert.Equal(t, model.GaugeValue(10), gval)
 

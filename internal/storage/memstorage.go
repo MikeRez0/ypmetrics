@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -39,7 +40,7 @@ func (ms *MemStorage) Metrics() (res []model.Metrics) {
 	return res
 }
 
-func (ms *MemStorage) StoreMetric(metric model.Metrics) error {
+func (ms *MemStorage) StoreMetric(ctx context.Context, metric model.Metrics) error {
 	switch metric.MType {
 	case model.CounterType:
 		ms.MetricsCounter[metric.ID] = model.CounterValue(*metric.Delta)
@@ -66,12 +67,13 @@ func (ms *MemStorage) MetricStrings() (res []struct{ Name, Value string }) {
 	return res
 }
 
-func (ms *MemStorage) UpdateGauge(metric string, value model.GaugeValue) (model.GaugeValue, error) {
+func (ms *MemStorage) UpdateGauge(ctx context.Context,
+	metric string, value model.GaugeValue) (model.GaugeValue, error) {
 	ms.MetricsGauge[metric] = value
 	return ms.MetricsGauge[metric], nil
 }
 
-func (ms *MemStorage) GetGauge(metric string) (model.GaugeValue, error) {
+func (ms *MemStorage) GetGauge(ctx context.Context, metric string) (model.GaugeValue, error) {
 	if val, ok := ms.MetricsGauge[metric]; ok {
 		return val, nil
 	} else {
@@ -79,7 +81,8 @@ func (ms *MemStorage) GetGauge(metric string) (model.GaugeValue, error) {
 	}
 }
 
-func (ms *MemStorage) UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error) {
+func (ms *MemStorage) UpdateCounter(ctx context.Context,
+	metric string, value model.CounterValue) (model.CounterValue, error) {
 	var m, ok = ms.MetricsCounter[metric]
 	if !ok {
 		m = 0
@@ -88,7 +91,7 @@ func (ms *MemStorage) UpdateCounter(metric string, value model.CounterValue) (mo
 	return ms.MetricsCounter[metric], nil
 }
 
-func (ms *MemStorage) GetCounter(metric string) (model.CounterValue, error) {
+func (ms *MemStorage) GetCounter(ctx context.Context, metric string) (model.CounterValue, error) {
 	if val, ok := ms.MetricsCounter[metric]; ok {
 		return val, nil
 	} else {
@@ -96,6 +99,6 @@ func (ms *MemStorage) GetCounter(metric string) (model.CounterValue, error) {
 	}
 }
 
-func (fs *MemStorage) Ping() error {
+func (ms *MemStorage) Ping() error {
 	return errors.New("Ping not supported")
 }

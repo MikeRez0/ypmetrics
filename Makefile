@@ -46,9 +46,26 @@ test:
 test-cover: test
 	go test ./... -cover
 
+yptestdbstart:
+	docker run --rm \
+		--name=praktikum-db \
+		--expose 5433 \
+		-e POSTGRES_PASSWORD="postgres" \
+		-e POSTGRES_USER="postgres" \
+		-e POSTGRES_DB="praktikum" \
+		-d \
+		-p 5433:5432 \
+		postgres:15.3
+
 .PHONY: yptest
 yptest: build-server build-agent
-	./../metricstest-darwin-amd64 -test.v -test.run=$(test) -binary-path cmd/server/server -agent-binary-path cmd/agent/agent -source-path=. -server-port=8888 -file-storage-path=./.tmp/metrics.json
+	./../metricstest-darwin-amd64 -test.v -test.run=$(test) \
+	-binary-path cmd/server/server \
+	-agent-binary-path cmd/agent/agent \
+	-source-path=. \
+	-server-port=8881 \
+	-file-storage-path=./.tmp/metrics.json \
+	-database-dsn=postgres://postgres:postgres@localhost:5433/praktikum?sslmode=disable
 
 .PHONY: db-start
 db-start:
@@ -57,3 +74,38 @@ db-start:
 .PHONY: db-stop
 db-stop:
 	docker compose -f "scripts/db/docker-compose.yaml" down
+
+.PHONY: db-clean
+db-clean:
+	sudo rm -rf ./	scripts/db/data/
+
+.PHONY: db-migration-new
+db-migration-new:
+	docker run --rm \
+    -v $(realpath ./internal/storage/migrations):/migrations \
+    migrate/migrate:v4.16.2 \
+        create \
+        -dir /migrations \
+        -ext .sql \
+        -seq -digits 5 \
+        $(name)
+
+.PHONY: db-migration-up
+db-migration-up:
+	docker run --rm \
+    -v $(realpath ./internal/storage/migrations):/migrations \
+	--network host \
+    migrate/migrate:v4.16.2 \
+        -path=/migrations \
+        -database postgres://metrics:metrics@localhost:5432/metrics_db?sslmode=disable \
+        up 
+
+.PHONY: db-migration-down
+db-migration-down:
+	docker run --rm \
+    -v $(realpath ./internal/storage/migrations):/migrations \
+	--network host \
+    migrate/migrate:v4.16.2 \
+        -path=/migrations \
+        -database postgres://metrics:metrics@localhost:5432/metrics_db?sslmode=disable \
+        down 1

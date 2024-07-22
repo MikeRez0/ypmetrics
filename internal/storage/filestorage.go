@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +29,7 @@ func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Lo
 	}
 
 	if restore {
-		err := fs.ReadMetrics()
+		err := fs.ReadMetrics(context.Background())
 		if err != nil {
 			return nil, fmt.Errorf("error restoring from file %s : %w", filename, err)
 		}
@@ -49,8 +50,9 @@ func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Lo
 	return &fs, nil
 }
 
-func (fs *FileStorage) UpdateGauge(metric string, value model.GaugeValue) (model.GaugeValue, error) {
-	val, err := fs.MemStorage.UpdateGauge(metric, value)
+func (fs *FileStorage) UpdateGauge(ctx context.Context,
+	metric string, value model.GaugeValue) (model.GaugeValue, error) {
+	val, err := fs.MemStorage.UpdateGauge(ctx, metric, value)
 	if err != nil {
 		return model.GaugeValue(0), err
 	}
@@ -65,8 +67,9 @@ func (fs *FileStorage) UpdateGauge(metric string, value model.GaugeValue) (model
 	return val, nil
 }
 
-func (fs *FileStorage) UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error) {
-	val, err := fs.MemStorage.UpdateCounter(metric, value)
+func (fs *FileStorage) UpdateCounter(ctx context.Context,
+	metric string, value model.CounterValue) (model.CounterValue, error) {
+	val, err := fs.MemStorage.UpdateCounter(ctx, metric, value)
 	if err != nil {
 		return model.CounterValue(0), err
 	}
@@ -106,7 +109,7 @@ func (fs *FileStorage) WriteMetrics() error {
 	return nil
 }
 
-func (fs *FileStorage) ReadMetrics() error {
+func (fs *FileStorage) ReadMetrics(ctx context.Context) error {
 	fs.log.Info("Start reading metrics from file")
 	file, err := os.OpenFile(fs.filename, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
@@ -128,7 +131,7 @@ func (fs *FileStorage) ReadMetrics() error {
 		if err != nil {
 			return fmt.Errorf("error while read file %s: %w", fs.filename, err)
 		}
-		err = fs.StoreMetric(metric)
+		err = fs.StoreMetric(ctx, metric)
 		if err != nil {
 			return fmt.Errorf("error while store metric: %w", err)
 		}

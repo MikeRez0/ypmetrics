@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"html/template"
@@ -12,11 +13,11 @@ import (
 type Repository interface {
 	Metrics() []model.Metrics
 	MetricStrings() []struct{ Name, Value string }
-	StoreMetric(metric model.Metrics) error
-	UpdateGauge(metric string, value model.GaugeValue) (model.GaugeValue, error)
-	GetGauge(metric string) (model.GaugeValue, error)
-	UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error)
-	GetCounter(metric string) (model.CounterValue, error)
+	StoreMetric(context context.Context, metric model.Metrics) error
+	UpdateGauge(context context.Context, metric string, value model.GaugeValue) (model.GaugeValue, error)
+	GetGauge(context context.Context, metric string) (model.GaugeValue, error)
+	UpdateCounter(context context.Context, metric string, value model.CounterValue) (model.CounterValue, error)
+	GetCounter(context context.Context, metric string) (model.CounterValue, error)
 	Ping() error
 }
 

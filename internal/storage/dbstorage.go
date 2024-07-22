@@ -1,10 +1,17 @@
 package storage
 
 import (
-	"database/sql"
+	"context"
+	"embed"
+	"errors"
 	"fmt"
+	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"go.uber.org/zap"
@@ -13,42 +20,80 @@ import (
 type DBStorage struct {
 	MemStorage
 	log      *zap.Logger
-	db       *sql.DB
+	pool     *pgxpool.Pool
 	syncSave bool
 }
 
-func NewDBStorage(dsn string, log *zap.Logger) (*DBStorage, error) {
-	fs := DBStorage{
+//go:embed migrations/*.sql
+var migrationsDir embed.FS
+
+func NewDBStorage(dsn string, saveInterval int, restore bool, log *zap.Logger) (*DBStorage, error) {
+	if err := runMigrations(dsn); err != nil {
+		return nil, fmt.Errorf("failed to run DB migrations: %w", err)
+	}
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a connection pool: %w", err)
+	}
+
+	dbs := DBStorage{
 		MemStorage: *NewMemStorage(),
-		db:         nil,
+		pool:       pool,
+		syncSave:   saveInterval == 0,
 		log:        log,
 	}
 
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("error opening DB connection: %w", err)
-	}
-	fs.db = db
-	// defer func() {
-	// 	err := db.Close()
-	// 	if err != nil {
-	// 		log.Error("db close error", zap.Error(err))
-	// 	}
-	// }()
-
 	log.Debug("Success connected to db")
 
-	return &fs, nil
+	if restore {
+		err := dbs.ReadMetrics(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("error restoring from db : %w", err)
+		}
+	}
+
+	if !dbs.syncSave {
+		ticker := time.NewTicker(time.Duration(saveInterval) * time.Second)
+		go func() {
+			for range ticker.C {
+				err := dbs.WriteMetrics(context.Background())
+				if err != nil {
+					log.Error("error writing async metrics", zap.Error(err))
+				}
+			}
+		}()
+	}
+
+	return &dbs, nil
 }
 
-func (ds *DBStorage) UpdateGauge(metric string, value model.GaugeValue) (model.GaugeValue, error) {
-	val, err := ds.MemStorage.UpdateGauge(metric, value)
+func runMigrations(dsn string) error {
+	d, err := iofs.New(migrationsDir, "migrations")
+	if err != nil {
+		return fmt.Errorf("failed to return an iofs driver: %w", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance("iofs", d, dsn)
+	if err != nil {
+		return fmt.Errorf("failed to get a new migrate instance: %w", err)
+	}
+	if err := m.Up(); err != nil {
+		if !errors.Is(err, migrate.ErrNoChange) {
+			return fmt.Errorf("failed to apply migrations to the DB: %w", err)
+		}
+	}
+	return nil
+}
+
+func (ds *DBStorage) UpdateGauge(ctx context.Context,
+	metric string, value model.GaugeValue) (model.GaugeValue, error) {
+	val, err := ds.MemStorage.UpdateGauge(ctx, metric, value)
 	if err != nil {
 		return model.GaugeValue(0), err
 	}
 
 	if ds.syncSave {
-		err = ds.WriteMetrics()
+		err = ds.WriteMetrics(ctx)
 		if err != nil {
 			return model.GaugeValue(0), err
 		}
@@ -57,14 +102,15 @@ func (ds *DBStorage) UpdateGauge(metric string, value model.GaugeValue) (model.G
 	return val, nil
 }
 
-func (ds *DBStorage) UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error) {
-	val, err := ds.MemStorage.UpdateCounter(metric, value)
+func (ds *DBStorage) UpdateCounter(ctx context.Context,
+	metric string, value model.CounterValue) (model.CounterValue, error) {
+	val, err := ds.MemStorage.UpdateCounter(ctx, metric, value)
 	if err != nil {
 		return model.CounterValue(0), err
 	}
 
 	if ds.syncSave {
-		err = ds.WriteMetrics()
+		err = ds.WriteMetrics(ctx)
 		if err != nil {
 			return model.CounterValue(0), err
 		}
@@ -73,66 +119,76 @@ func (ds *DBStorage) UpdateCounter(metric string, value model.CounterValue) (mod
 	return val, nil
 }
 
-func (ds *DBStorage) WriteMetrics() error {
-	// ds.log.Info("Start writing metrics to file")
-	// file, err := os.OpenFile(ds.filename, os.O_CREATE|os.O_WRONLY, 0o600)
-	// if err != nil {
-	// 	return fmt.Errorf("error opening file: %w", err)
-	// }
-	// defer func() {
-	// 	err := file.Close()
-	// 	if err != nil {
-	// 		ds.log.Error("error while closing file", zap.Error(err))
-	// 	}
-	// }()
+func (ds *DBStorage) WriteMetrics(ctx context.Context) error {
+	ds.log.Info("Start writing metrics to database")
 
-	// encoder := json.NewEncoder(file)
+	tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
 
-	// for _, m := range ds.Metrics() {
-	// 	err = encoder.Encode(m)
-	// 	if err != nil {
-	// 		return fmt.Errorf("error encoding metric %s: %w", m.ID, err)
-	// 	}
-	// }
+	_, err = tx.Exec(ctx, `TRUNCATE "metric"`)
+	if err != nil {
+		return fmt.Errorf("error truncating metrics: %w", err)
+	}
 
-	// ds.log.Info("End writing metrics to file")
+	for _, m := range ds.Metrics() {
+		mt, _ := m.MType.Value()
+		_, err := tx.Exec(ctx,
+			`INSERT INTO "metric" ("id", "mtype", "delta", "value")
+			VALUES ($1, $2, $3, $4);`,
+			m.ID, mt, m.Delta, m.Value)
+		if err != nil {
+			errRollback := tx.Rollback(ctx)
+			if errRollback != nil {
+				ds.log.Error("error while rollback", zap.Error(errRollback))
+			}
+			return fmt.Errorf("error inserting metric: %w", err)
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		errRollback := tx.Rollback(ctx)
+		if errRollback != nil {
+			ds.log.Error("error while rollback", zap.Error(errRollback))
+		}
+		return fmt.Errorf("error commiting transaction: %w", err)
+	}
+
+	ds.log.Info("End writing metrics to database")
 	return nil
 }
 
-func (ds *DBStorage) ReadMetrics() error {
-	// ds.log.Info("Start reading metrics from file")
-	// file, err := os.OpenFile(ds.filename, os.O_CREATE|os.O_RDWR, 0o600)
-	// if err != nil {
-	// 	return fmt.Errorf("error while open file %s: %w", ds.filename, err)
-	// }
-	// defer func() {
-	// 	err := file.Close()
-	// 	if err != nil {
-	// 		ds.log.Error("Error while closing file", zap.Error(err))
-	// 	}
-	// }()
+func (ds *DBStorage) ReadMetrics(ctx context.Context) error {
+	ds.log.Info("Start reading metrics from database")
 
-	// scan := bufio.NewScanner(file)
+	rows, err := ds.pool.Query(ctx,
+		`SELECT "id", "mtype", "delta", "value"
+		FROM "metric"`)
+	if err != nil {
+		return fmt.Errorf("error selecting metric: %w", err)
+	}
 
-	// var metric model.Metrics
-	// for scan.Scan() {
-	// 	data := scan.Bytes()
-	// 	err = json.Unmarshal(data, &metric)
-	// 	if err != nil {
-	// 		return fmt.Errorf("error while read file %s: %w", ds.filename, err)
-	// 	}
-	// 	err = ds.StoreMetric(metric)
-	// 	if err != nil {
-	// 		return fmt.Errorf("error while store metric: %w", err)
-	// 	}
-	// }
+	for rows.Next() {
+		var metric model.Metrics
 
-	// ds.log.Info("End reading metrics from file")
+		err = rows.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value)
+		if err != nil {
+			return fmt.Errorf("error reading metric: %w", err)
+		}
+		err = ds.StoreMetric(ctx, metric)
+		if err != nil {
+			return fmt.Errorf("error while store metric: %w", err)
+		}
+	}
+
+	ds.log.Info("End reading metrics from database")
 	return nil
 }
 
 func (ds *DBStorage) Ping() error {
-	err := ds.db.Ping()
+	err := ds.pool.Ping(context.Background())
 	if err != nil {
 		return fmt.Errorf("error connecting DB: %w", err)
 	}
