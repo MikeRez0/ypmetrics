@@ -29,3 +29,6 @@ golangci-lint/
 
 #Temp files
 .tmp
+
+#data files
+scripts/db/data/

@@ -52,7 +52,7 @@ func poll(metricStore *MetricStore) {
 func report(metricStore *MetricStore, serverURL string) {
 	serverURL = "http://" + serverURL
 
-	metricType := model.CounterType
+	metricType := model.MetricType(model.CounterType)
 	for metricName, val := range metricStore.MetricsCounter {
 		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
@@ -62,7 +62,7 @@ func report(metricStore *MetricStore, serverURL string) {
 		}
 	}
 
-	metricType = model.GaugeType
+	metricType = model.MetricType(model.GaugeType)
 	for metricName, val := range metricStore.MetricsGauge {
 		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
 		err := sendMetricJSON(serverURL, metric)
