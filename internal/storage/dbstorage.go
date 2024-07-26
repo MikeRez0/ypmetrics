@@ -126,6 +126,12 @@ func (ds *DBStorage) WriteMetrics(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
 	}
+	defer func() {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			ds.log.Error("error while rollback", zap.Error(err))
+		}
+	}()
 
 	_, err = tx.Exec(ctx, `TRUNCATE "metric"`)
 	if err != nil {
@@ -139,20 +145,12 @@ func (ds *DBStorage) WriteMetrics(ctx context.Context) error {
 			VALUES ($1, $2, $3, $4);`,
 			m.ID, mt, m.Delta, m.Value)
 		if err != nil {
-			errRollback := tx.Rollback(ctx)
-			if errRollback != nil {
-				ds.log.Error("error while rollback", zap.Error(errRollback))
-			}
 			return fmt.Errorf("error inserting metric: %w", err)
 		}
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		errRollback := tx.Rollback(ctx)
-		if errRollback != nil {
-			ds.log.Error("error while rollback", zap.Error(errRollback))
-		}
 		return fmt.Errorf("error commiting transaction: %w", err)
 	}
 
@@ -169,6 +167,7 @@ func (ds *DBStorage) ReadMetrics(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error selecting metric: %w", err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var metric model.Metrics
