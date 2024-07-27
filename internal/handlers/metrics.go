@@ -189,7 +189,8 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 
 	err := mh.Store.BatchUpdate(c, metrics)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		err := c.AbortWithError(http.StatusInternalServerError, err)
+		mh.Log.Error("Error batch updating metrics ", zap.Error(err))
 		return
 	}
 
