@@ -40,6 +40,7 @@ func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	jsonGroup.Use(handlers.GinCompress(logger.LoggerWithComponent(mylog, "compress")))
 	jsonGroup.POST("/update/", h.UpdateMetricJSON)
 	jsonGroup.POST("/value/", h.GetMetricJSON)
+	jsonGroup.POST("/updates/", h.BatchUpdateMetricsJSON)
 
 	r.GET("/ping", h.PingDB)
 

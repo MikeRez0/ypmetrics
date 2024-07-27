@@ -18,6 +18,7 @@ type Repository interface {
 	GetGauge(context context.Context, metric string) (model.GaugeValue, error)
 	UpdateCounter(context context.Context, metric string, value model.CounterValue) (model.CounterValue, error)
 	GetCounter(context context.Context, metric string) (model.CounterValue, error)
+	BatchUpdate(ctx context.Context, metrics []model.Metrics) error
 	Ping() error
 }
 

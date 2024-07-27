@@ -178,3 +178,20 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 		return
 	}
 }
+
+func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
+	var metrics []model.Metrics
+	if err := c.ShouldBindJSON(&metrics); err != nil {
+		_ = c.Error(err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	err := mh.Store.BatchUpdate(c, metrics)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}

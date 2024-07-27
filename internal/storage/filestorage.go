@@ -85,7 +85,7 @@ func (fs *FileStorage) UpdateCounter(ctx context.Context,
 
 func (fs *FileStorage) WriteMetrics() error {
 	fs.log.Info("Start writing metrics to file")
-	file, err := os.OpenFile(fs.filename, os.O_CREATE|os.O_WRONLY, 0o600)
+	file, err := os.OpenFile(fs.filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("error opening file: %w", err)
 	}

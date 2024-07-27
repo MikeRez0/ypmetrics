@@ -102,3 +102,22 @@ func (ms *MemStorage) GetCounter(ctx context.Context, metric string) (model.Coun
 func (ms *MemStorage) Ping() error {
 	return errors.New("Ping not supported")
 }
+
+func (ms *MemStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) error {
+	for _, metric := range metrics {
+		var err error
+		switch metric.MType {
+		case model.GaugeType:
+			_, err = ms.UpdateGauge(ctx, metric.ID, model.GaugeValue(*metric.Value))
+		case model.CounterType:
+			_, err = ms.UpdateCounter(ctx, metric.ID, model.CounterValue(*metric.Delta))
+		default:
+			err = fmt.Errorf("unrecognized metric type %s", metric.MType)
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
