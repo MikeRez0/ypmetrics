@@ -35,7 +35,7 @@ func Run() error {
 		case <-tickerPoll.C:
 			poll(metricStore)
 		case <-tickerReport.C:
-			report(metricStore, conf.HostString)
+			reportBatch(metricStore, conf.HostString)
 			clear(metricStore.MetricsGauge)
 			clear(metricStore.MetricsCounter)
 		}
@@ -52,7 +52,7 @@ func poll(metricStore *MetricStore) {
 func report(metricStore *MetricStore, serverURL string) {
 	serverURL = "http://" + serverURL
 
-	metricType := model.CounterType
+	metricType := model.MetricType(model.CounterType)
 	for metricName, val := range metricStore.MetricsCounter {
 		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
@@ -62,7 +62,7 @@ func report(metricStore *MetricStore, serverURL string) {
 		}
 	}
 
-	metricType = model.GaugeType
+	metricType = model.MetricType(model.GaugeType)
 	for metricName, val := range metricStore.MetricsGauge {
 		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
 		err := sendMetricJSON(serverURL, metric)
@@ -70,6 +70,47 @@ func report(metricStore *MetricStore, serverURL string) {
 			log.Println(err)
 		}
 	}
+}
+
+func reportBatch(metricStore *MetricStore, serverURL string) {
+	serverURL = "http://" + serverURL
+
+	metrics := make([]model.Metrics, 0)
+
+	metricType := model.MetricType(model.CounterType)
+	for metricName, val := range metricStore.MetricsCounter {
+		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
+		metrics = append(metrics, metric)
+	}
+	metricType = model.MetricType(model.GaugeType)
+	for metricName, val := range metricStore.MetricsGauge {
+		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
+		metrics = append(metrics, metric)
+	}
+
+	err := sendMetricBatchJSON(serverURL, metrics)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func sendJSON(requestStr string, jsonStr []byte) error {
+	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return fmt.Errorf("error on %s : %w", requestStr, err)
+	}
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error on %s : %w", requestStr, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad response %v for request %s", resp.StatusCode, requestStr)
+	}
+	return nil
 }
 
 func sendMetricJSON(serverURL string, metric model.Metrics) error {
@@ -80,21 +121,16 @@ func sendMetricJSON(serverURL string, metric model.Metrics) error {
 		return fmt.Errorf("erron while json encode: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
-	if err != nil {
-		return fmt.Errorf("error on %s : %w", requestStr, err)
-	}
-	req.Header.Add("Accept-Encoding", "gzip")
-	req.Header.Add("Content-Type", "application/json")
+	return sendJSON(requestStr, jsonStr)
+}
 
-	resp, err := http.DefaultClient.Do(req)
-	// http.Post(requestStr, "application/json", bytes.NewBuffer(jsonStr))
+func sendMetricBatchJSON(serverURL string, metrics []model.Metrics) error {
+	requestStr := serverURL + "/updates/"
+
+	jsonStr, err := json.Marshal(metrics)
 	if err != nil {
-		return fmt.Errorf("error on %s : %w", requestStr, err)
+		return fmt.Errorf("erron while json encode: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad response %v for request %s", resp.StatusCode, requestStr)
-	}
-	return nil
+
+	return sendJSON(requestStr, jsonStr)
 }

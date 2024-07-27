@@ -1,0 +1,5 @@
+BEGIN TRANSACTION;
+
+drop TABLE public.metric;
+
+END TRANSACTION;

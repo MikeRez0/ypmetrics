@@ -40,6 +40,9 @@ func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	jsonGroup.Use(handlers.GinCompress(logger.LoggerWithComponent(mylog, "compress")))
 	jsonGroup.POST("/update/", h.UpdateMetricJSON)
 	jsonGroup.POST("/value/", h.GetMetricJSON)
+	jsonGroup.POST("/updates/", h.BatchUpdateMetricsJSON)
+
+	r.GET("/ping", h.PingDB)
 
 	return r
 }
@@ -57,7 +60,17 @@ func run() error {
 
 	var repo handlers.Repository
 
-	if conf.FileStoragePath != "" {
+	switch {
+	case conf.DSN != "":
+		repo, err = storage.NewDBStorage(
+			conf.DSN,
+			conf.StoreInterval,
+			conf.Restore,
+			logger.LoggerWithComponent(mylog, "dbstorage"))
+		if err != nil {
+			return fmt.Errorf("error creating db repo: %w", err)
+		}
+	case conf.FileStoragePath != "":
 		repo, err = storage.NewFileStorage(
 			conf.FileStoragePath,
 			conf.StoreInterval,
@@ -66,9 +79,10 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("error creating file repo: %w", err)
 		}
-	} else {
+	default:
 		repo = storage.NewMemStorage()
 	}
+
 	h, err := handlers.NewMetricsHandler(repo, logger.LoggerWithComponent(mylog, "handlers"))
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
