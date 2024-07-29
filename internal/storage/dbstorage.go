@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -187,7 +188,10 @@ func (ds *DBStorage) ReadMetrics(ctx context.Context) error {
 }
 
 func (ds *DBStorage) Ping() error {
-	err := ds.pool.Ping(context.Background())
+	err := utils.Retry(context.Background(),
+		func() error {
+			return ds.pool.Ping(context.Background())
+		}, 3, ds.log)
 	if err != nil {
 		return fmt.Errorf("error connecting DB: %w", err)
 	}
@@ -202,33 +206,40 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 
 	ds.log.Info("Start writing Batch metrics to database")
 
-	tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("error starting transaction: %w", err)
-	}
-	defer func() {
-		err := tx.Rollback(ctx)
-		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			ds.log.Error("error while rollback", zap.Error(err))
-		}
-	}()
+	err = utils.Retry(ctx, func() error {
 
-	for _, m := range metrics {
-		mt, _ := m.MType.Value()
-		_, err := tx.Exec(ctx,
-			`INSERT INTO "metric" ("id", "mtype", "delta", "value")
+		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
+		if err != nil {
+			return fmt.Errorf("error starting transaction: %w", err)
+		}
+		defer func() {
+			err := tx.Rollback(ctx)
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				ds.log.Error("error while rollback", zap.Error(err))
+			}
+		}()
+
+		for _, m := range metrics {
+			mt, _ := m.MType.Value()
+			_, err := tx.Exec(ctx,
+				`INSERT INTO "metric" ("id", "mtype", "delta", "value")
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT ("id") DO UPDATE
 			SET "mtype" = $2, "delta" = $3, "value" = $4;`,
-			m.ID, mt, m.Delta, m.Value)
-		if err != nil {
-			return fmt.Errorf("error upserting metric: %w", err)
+				m.ID, mt, m.Delta, m.Value)
+			if err != nil {
+				return fmt.Errorf("error upserting metric: %w", err)
+			}
 		}
-	}
 
-	err = tx.Commit(ctx)
+		err = tx.Commit(ctx)
+		if err != nil {
+			return fmt.Errorf("error commiting transaction: %w", err)
+		}
+		return nil
+	}, 3, ds.log)
 	if err != nil {
-		return fmt.Errorf("error commiting transaction: %w", err)
+		return err
 	}
 
 	ds.log.Info("End writing Batch metrics to database")
