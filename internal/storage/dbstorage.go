@@ -207,7 +207,6 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 	ds.log.Info("Start writing Batch metrics to database")
 
 	err = utils.Retry(ctx, func() error {
-
 		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
 		if err != nil {
 			return fmt.Errorf("error starting transaction: %w", err)
@@ -239,7 +238,7 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 		return nil
 	}, 3, ds.log)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck //error from callback
 	}
 
 	ds.log.Info("End writing Batch metrics to database")

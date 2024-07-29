@@ -14,7 +14,7 @@ func Retry(ctx context.Context, f RetryFunc, retryAttempts int, logger *zap.Logg
 	const retryIntervalStep = 2
 
 	var err error
-	for i := 0; i < retryAttempts; i++ {
+	for i := range 3 {
 		select {
 		case <-ctx.Done():
 			logger.Error("All retries failed :( ")
