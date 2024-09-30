@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres
-    restart: always
+    # restart: always
     expose:
       - 5432
     ports:
