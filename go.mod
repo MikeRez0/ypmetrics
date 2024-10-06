@@ -1,6 +1,6 @@
 module github.com/MikeRez0/ypmetrics
 
-go 1.23.1
+go 1.22.8
 
 require github.com/stretchr/testify v1.9.0
 
