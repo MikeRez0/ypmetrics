@@ -11,21 +11,18 @@ import (
 )
 
 type MemStorage struct {
-	MetricsGauge   sync.Map //map[string]model.GaugeValue
-	MetricsCounter sync.Map //map[string]model.CounterValue
+	MetricsGauge   sync.Map
+	MetricsCounter sync.Map
 }
 
 func NewMemStorage() *MemStorage {
-	// mg := make(map[string]model.GaugeValue)
-	// mc := make(map[string]model.CounterValue)
 	return &MemStorage{sync.Map{}, sync.Map{}}
 }
 
 func (ms *MemStorage) Metrics() (res []model.Metrics) {
 	ms.MetricsCounter.Range(func(name, value any) bool {
 		if val, ok := value.(model.CounterValue); ok {
-			// val := value.(model.CounterValue).(int64)
-			res = append(res, model.Metrics{
+			res = append(res, model.Metrics{ //nolint:forcetypeassert //this is why
 				ID:    name.(string),
 				MType: model.CounterType,
 				Delta: (*int64)(&val),
@@ -44,7 +41,7 @@ func (ms *MemStorage) Metrics() (res []model.Metrics) {
 	ms.MetricsGauge.Range(func(name, value any) bool {
 		if val, ok := value.(model.GaugeValue); ok {
 			// val := value.(float64)
-			res = append(res, model.Metrics{
+			res = append(res, model.Metrics{ //nolint:forcetypeassert //this is why
 				ID:    name.(string),
 				MType: model.GaugeType,
 				Value: (*float64)(&val),
@@ -81,7 +78,7 @@ func (ms *MemStorage) StoreMetric(ctx context.Context, metric model.Metrics) err
 func (ms *MemStorage) MetricStrings() (res []struct{ Name, Value string }) {
 	ms.MetricsCounter.Range(func(name, value any) bool {
 		if val, ok := value.(model.CounterValue); ok {
-			res = append(res, struct {
+			res = append(res, struct { //nolint:forcetypeassert //this is why
 				Name  string
 				Value string
 			}{name.(string), fmt.Sprint(val)})
@@ -98,7 +95,7 @@ func (ms *MemStorage) MetricStrings() (res []struct{ Name, Value string }) {
 
 	ms.MetricsGauge.Range(func(name, value any) bool {
 		if val, ok := value.(model.GaugeValue); ok {
-			res = append(res, struct {
+			res = append(res, struct { //nolint:forcetypeassert //this is why
 				Name  string
 				Value string
 			}{name.(string), strconv.FormatFloat(float64(val), 'f', 5, 64)})
@@ -122,12 +119,12 @@ func (ms *MemStorage) UpdateGauge(ctx context.Context,
 
 	v, _ := ms.MetricsGauge.Load(metric)
 
-	return v.(model.GaugeValue), nil
+	return v.(model.GaugeValue), nil //nolint:forcetypeassert //this is why
 }
 
 func (ms *MemStorage) GetGauge(ctx context.Context, metric string) (model.GaugeValue, error) {
 	if val, ok := ms.MetricsGauge.Load(metric); ok {
-		return val.(model.GaugeValue), nil
+		return val.(model.GaugeValue), nil //nolint:forcetypeassert //this is why
 	} else {
 		return 0, fmt.Errorf("not found %s", metric)
 	}
@@ -139,17 +136,17 @@ func (ms *MemStorage) UpdateCounter(ctx context.Context,
 	if !ok {
 		m = model.CounterValue(0)
 	}
-	val := m.(model.CounterValue)
+	val, _ := m.(model.CounterValue)
 	ms.MetricsCounter.Store(metric, val+value)
 	// ms.MetricsCounter[metric] = m + value
 
 	v, _ := ms.MetricsCounter.Load(metric)
-	return v.(model.CounterValue), nil
+	return v.(model.CounterValue), nil //nolint:forcetypeassert //this is why
 }
 
 func (ms *MemStorage) GetCounter(ctx context.Context, metric string) (model.CounterValue, error) {
 	if val, ok := ms.MetricsCounter.Load(metric); ok {
-		return val.(model.CounterValue), nil
+		return val.(model.CounterValue), nil //nolint:forcetypeassert //this is why
 	} else {
 		return 0, fmt.Errorf("not found %s", metric)
 	}

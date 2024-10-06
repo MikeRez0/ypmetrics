@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type DBStorage struct {
+type DBStorage struct { //nolint //this is why
 	MemStorage
 	log      *zap.Logger
 	pool     *pgxpool.Pool
