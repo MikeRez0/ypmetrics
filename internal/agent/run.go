@@ -12,7 +12,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
-	"github.com/MikeRez0/ypmetrics/internal/utils"
+	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
 	"go.uber.org/zap"
 )
 
@@ -110,7 +110,7 @@ func sendJSON(requestStr string, jsonStr []byte, log *zap.Logger) error {
 	req.Header.Add("Accept-Encoding", "gzip")
 	req.Header.Add("Content-Type", "application/json")
 
-	return utils.Retry(context.Background(), func() error { //nolint:wrapcheck //error from callback
+	return retrier.Retry(context.Background(), func() error { //nolint:wrapcheck //error from callback
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("error on %s : %w", requestStr, err)

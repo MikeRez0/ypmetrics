@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
-	"github.com/MikeRez0/ypmetrics/internal/utils"
+	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
 	"go.uber.org/zap"
 )
 
@@ -140,8 +140,11 @@ func (ds *DBStorage) WriteMetrics(ctx context.Context) error {
 	}
 
 	for _, m := range ds.Metrics() {
-		mt, _ := m.MType.Value()
-		_, err := tx.Exec(ctx,
+		mt, err := m.MType.Value()
+		if err != nil {
+			return fmt.Errorf("error reading value: %w", err)
+		}
+		_, err = tx.Exec(ctx,
 			`INSERT INTO "metric" ("id", "mtype", "delta", "value")
 			VALUES ($1, $2, $3, $4);`,
 			m.ID, mt, m.Delta, m.Value)
@@ -188,7 +191,7 @@ func (ds *DBStorage) ReadMetrics(ctx context.Context) error {
 }
 
 func (ds *DBStorage) Ping() error {
-	err := utils.Retry(context.Background(),
+	err := retrier.Retry(context.Background(),
 		func() error {
 			return ds.pool.Ping(context.Background())
 		}, 3, ds.log)
@@ -206,7 +209,7 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 
 	ds.log.Info("Start writing Batch metrics to database")
 
-	err = utils.Retry(ctx, func() error {
+	err = retrier.Retry(ctx, func() error {
 		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
 		if err != nil {
 			return fmt.Errorf("error starting transaction: %w", err)

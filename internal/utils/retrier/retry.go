@@ -1,4 +1,4 @@
-package utils
+package retrier
 
 import (
 	"context"
@@ -26,7 +26,8 @@ func Retry(ctx context.Context, f RetryFunc, retryAttempts int, logger *zap.Logg
 			return nil
 		}
 		logger.Info(fmt.Sprintf("Going to retry # %v with error", i+1), zap.Error(err))
-		time.Sleep(time.Duration(1+retryIntervalStep*i) * time.Second)
+
+		<-time.After(time.Duration(1+retryIntervalStep*i) * time.Second)
 	}
 	return err
 }
