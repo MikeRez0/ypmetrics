@@ -29,9 +29,6 @@ func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	r.Use(logger.GinLogger(mylog))
 	r.HandleMethodNotAllowed = true
 
-	// не получилось использовать свой мидлвар, потому что в ответ
-	// встраивалось application/x-gzip, игнорируя "мои" заголовки
-	// обсудить на 1-1
 	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
 	r.GET("/value/:metricType/:metric", h.GetMetricPlain)

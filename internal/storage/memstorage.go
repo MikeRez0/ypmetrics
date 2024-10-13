@@ -30,13 +30,6 @@ func (ms *MemStorage) Metrics() (res []model.Metrics) {
 		}
 		return true
 	})
-	// for name, value := range ms.MetricsCounter {
-	// 	res = append(res, model.Metrics{
-	// 		ID:    name,
-	// 		MType: model.CounterType,
-	// 		Delta: (*int64)(&value),
-	// 	})
-	// }
 
 	ms.MetricsGauge.Range(func(name, value any) bool {
 		if val, ok := value.(model.GaugeValue); ok {
@@ -51,14 +44,6 @@ func (ms *MemStorage) Metrics() (res []model.Metrics) {
 		return true
 	})
 
-	// for name, value := range ms.MetricsGauge {
-	// 	res = append(res, model.Metrics{
-	// 		ID:    name,
-	// 		MType: model.GaugeType,
-	// 		Value: (*float64)(&value),
-	// 	})
-	// }
-
 	return res
 }
 
@@ -66,10 +51,8 @@ func (ms *MemStorage) StoreMetric(ctx context.Context, metric model.Metrics) err
 	switch metric.MType {
 	case model.CounterType:
 		ms.MetricsCounter.Store(metric.ID, model.CounterValue(*metric.Delta))
-		// ms.MetricsCounter[metric.ID] = model.CounterValue(*metric.Delta)
 	case model.GaugeType:
 		ms.MetricsGauge.Store(metric.ID, model.GaugeValue(*metric.Value))
-		// ms.MetricsGauge[metric.ID] = model.GaugeValue(*metric.Value)
 	}
 
 	return nil
@@ -86,13 +69,6 @@ func (ms *MemStorage) MetricStrings() (res []struct{ Name, Value string }) {
 		return true
 	})
 
-	// for name, value := range ms.MetricsCounter {
-	// 	res = append(res, struct {
-	// 		Name  string
-	// 		Value string
-	// 	}{name, strconv.Itoa(int(value))})
-	// }
-
 	ms.MetricsGauge.Range(func(name, value any) bool {
 		if val, ok := value.(model.GaugeValue); ok {
 			res = append(res, struct { //nolint:forcetypeassert //this is why
@@ -103,19 +79,12 @@ func (ms *MemStorage) MetricStrings() (res []struct{ Name, Value string }) {
 		return true
 	})
 
-	// for name, value := range ms.MetricsGauge {
-	// 	res = append(res, struct {
-	// 		Name  string
-	// 		Value string
-	// 	}{name, strconv.FormatFloat(float64(value), 'f', 5, 64)})
-	// }
 	return res
 }
 
 func (ms *MemStorage) UpdateGauge(ctx context.Context,
 	metric string, value model.GaugeValue) (model.GaugeValue, error) {
 	ms.MetricsGauge.Store(metric, value)
-	// ms.MetricsGauge[metric] = value
 
 	v, _ := ms.MetricsGauge.Load(metric)
 
@@ -138,7 +107,6 @@ func (ms *MemStorage) UpdateCounter(ctx context.Context,
 	}
 	val, _ := m.(model.CounterValue)
 	ms.MetricsCounter.Store(metric, val+value)
-	// ms.MetricsCounter[metric] = m + value
 
 	v, _ := ms.MetricsCounter.Load(metric)
 	return v.(model.CounterValue), nil //nolint:forcetypeassert //this is why

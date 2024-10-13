@@ -28,10 +28,7 @@ func Run() error {
 		return fmt.Errorf("error while load config: %w", err)
 	}
 
-	log, err := logger.Initialize("info")
-	if err != nil {
-		return fmt.Errorf("error init logger: %w", err)
-	}
+	log := logger.GetLogger()
 
 	var metricStore = NewMetricStore()
 
