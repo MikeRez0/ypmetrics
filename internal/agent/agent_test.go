@@ -3,6 +3,7 @@ package agent
 import (
 	"testing"
 
+	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,6 +27,8 @@ func Test_report(t *testing.T) {
 	ms.PushCounterMetric("TestCounter", model.CounterValue(10))
 	ms.PushGaugeMetric("TestGauge", model.GaugeValue(15))
 
+	log, _ := logger.Initialize("info")
+
 	tests := []struct {
 		name string
 	}{
@@ -33,7 +36,7 @@ func Test_report(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report(ms, `localhost:8080`)
+			report(ms, `localhost:8080`, log)
 		})
 	}
 }
