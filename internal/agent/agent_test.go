@@ -36,7 +36,7 @@ func Test_report(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report(ms, `localhost:8080`, log)
+			report(ms, `localhost:8080`, log, "")
 		})
 	}
 }

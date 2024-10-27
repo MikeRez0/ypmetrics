@@ -6,6 +6,8 @@ import (
 	"fmt"
 )
 
+const HeaderSignerHash = "HashSHA256"
+
 const GaugeType = "gauge"
 const CounterType = "counter"
 

@@ -14,10 +14,10 @@ var (
 	once   sync.Once
 )
 
-func GetLogger() *zap.Logger {
+func GetLogger(level string) *zap.Logger {
 	once.Do(func() {
 		var err error
-		logger, err = Initialize("info")
+		logger, err = Initialize(level)
 		if err != nil {
 			panic(fmt.Sprintf("error init logger: %v", err))
 		}

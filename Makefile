@@ -41,6 +41,7 @@ yptest: build-server build-agent
 	-source-path=. \
 	-server-port=8881 \
 	-file-storage-path=./.tmp/metrics.json \
+	-key="test" \
 	-database-dsn=postgres://postgres:postgres@localhost:5433/praktikum?sslmode=disable
 
 .PHONY: db-start

@@ -121,7 +121,7 @@ func (ds *DBStorage) UpdateCounter(ctx context.Context,
 }
 
 func (ds *DBStorage) WriteMetrics(ctx context.Context) error {
-	ds.log.Info("Start writing metrics to database")
+	ds.log.Debug("Start writing metrics to database")
 
 	tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -158,12 +158,12 @@ func (ds *DBStorage) WriteMetrics(ctx context.Context) error {
 		return fmt.Errorf("error commiting transaction: %w", err)
 	}
 
-	ds.log.Info("End writing metrics to database")
+	ds.log.Debug("End writing metrics to database")
 	return nil
 }
 
 func (ds *DBStorage) ReadMetrics(ctx context.Context) error {
-	ds.log.Info("Start reading metrics from database")
+	ds.log.Debug("Start reading metrics from database")
 
 	rows, err := ds.pool.Query(ctx,
 		`SELECT "id", "mtype", "delta", "value"
@@ -186,7 +186,7 @@ func (ds *DBStorage) ReadMetrics(ctx context.Context) error {
 		}
 	}
 
-	ds.log.Info("End reading metrics from database")
+	ds.log.Debug("End reading metrics from database")
 	return nil
 }
 

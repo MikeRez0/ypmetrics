@@ -13,14 +13,9 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 	"go.uber.org/zap"
 )
-
-type Config struct {
-	HostString     string `env:"ADDRESS"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
-	PollInterval   int    `env:"POLL_INTERVAL"`
-}
 
 func Run() error {
 	conf, err := config.NewConfigAgent()
@@ -28,7 +23,7 @@ func Run() error {
 		return fmt.Errorf("error while load config: %w", err)
 	}
 
-	log := logger.GetLogger()
+	log := logger.GetLogger(conf.LogLevel)
 
 	var metricStore = NewMetricStore()
 
@@ -40,7 +35,7 @@ func Run() error {
 		case <-tickerPoll.C:
 			poll(metricStore)
 		case <-tickerReport.C:
-			reportBatch(metricStore, conf.HostString, log)
+			reportBatch(metricStore, conf.HostString, log, conf.SignKey)
 			clear(metricStore.MetricsGauge)
 			clear(metricStore.MetricsCounter)
 		}
@@ -54,14 +49,14 @@ func poll(metricStore *MetricStore) {
 	metricStore.PushGaugeMetric("RandomValue", model.GaugeValue(rand.Float64()*1_000))
 }
 
-func report(metricStore *MetricStore, serverURL string, log *zap.Logger) {
+func report(metricStore *MetricStore, serverURL string, log *zap.Logger, keyHash string) {
 	serverURL = "http://" + serverURL
 
 	metricType := model.MetricType(model.CounterType)
 	for metricName, val := range metricStore.MetricsCounter {
 		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
-		err := sendMetricJSON(serverURL, metric, log)
+		err := sendMetricJSON(serverURL, metric, log, keyHash)
 		if err != nil {
 			log.Error("error sending counter metric json", zap.Error(err))
 		}
@@ -70,14 +65,14 @@ func report(metricStore *MetricStore, serverURL string, log *zap.Logger) {
 	metricType = model.MetricType(model.GaugeType)
 	for metricName, val := range metricStore.MetricsGauge {
 		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
-		err := sendMetricJSON(serverURL, metric, log)
+		err := sendMetricJSON(serverURL, metric, log, keyHash)
 		if err != nil {
 			log.Error("error sending guage metric json", zap.Error(err))
 		}
 	}
 }
 
-func reportBatch(metricStore *MetricStore, serverURL string, log *zap.Logger) {
+func reportBatch(metricStore *MetricStore, serverURL string, log *zap.Logger, keyHash string) {
 	serverURL = "http://" + serverURL
 
 	metrics := make([]model.Metrics, 0)
@@ -93,19 +88,30 @@ func reportBatch(metricStore *MetricStore, serverURL string, log *zap.Logger) {
 		metrics = append(metrics, metric)
 	}
 
-	err := sendMetricBatchJSON(serverURL, metrics, log)
+	err := sendMetricBatchJSON(serverURL, metrics, log, keyHash)
 	if err != nil {
 		log.Error("error sending guage metric json", zap.Error(err))
 	}
 }
 
-func sendJSON(requestStr string, jsonStr []byte, log *zap.Logger) error {
+func sendJSON(requestStr string, jsonStr []byte, log *zap.Logger, keyHash string) error {
 	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return fmt.Errorf("error on %s : %w", requestStr, err)
 	}
 	req.Header.Add("Accept-Encoding", "gzip")
 	req.Header.Add("Content-Type", "application/json")
+
+	if keyHash != "" {
+		sgn := signer.NewSigner(keyHash)
+		h, err := sgn.GetHashBA(jsonStr)
+		if err != nil {
+			return fmt.Errorf("signer error: %w", err)
+		}
+
+		log.Debug("Hash value", zap.String("Hash", h))
+		req.Header.Add(model.HeaderSignerHash, h)
+	}
 
 	return retrier.Retry(context.Background(), func() error { //nolint:wrapcheck //error from callback
 		resp, err := http.DefaultClient.Do(req)
@@ -120,7 +126,7 @@ func sendJSON(requestStr string, jsonStr []byte, log *zap.Logger) error {
 	}, 3, log)
 }
 
-func sendMetricJSON(serverURL string, metric model.Metrics, log *zap.Logger) error {
+func sendMetricJSON(serverURL string, metric model.Metrics, log *zap.Logger, keyHash string) error {
 	requestStr := serverURL + "/update/"
 
 	jsonStr, err := json.Marshal(metric)
@@ -128,10 +134,10 @@ func sendMetricJSON(serverURL string, metric model.Metrics, log *zap.Logger) err
 		return fmt.Errorf("erron while json encode: %w", err)
 	}
 
-	return sendJSON(requestStr, jsonStr, log)
+	return sendJSON(requestStr, jsonStr, log, keyHash)
 }
 
-func sendMetricBatchJSON(serverURL string, metrics []model.Metrics, log *zap.Logger) error {
+func sendMetricBatchJSON(serverURL string, metrics []model.Metrics, log *zap.Logger, keyHash string) error {
 	requestStr := serverURL + "/updates/"
 
 	jsonStr, err := json.Marshal(metrics)
@@ -139,5 +145,5 @@ func sendMetricBatchJSON(serverURL string, metrics []model.Metrics, log *zap.Log
 		return fmt.Errorf("erron while json encode: %w", err)
 	}
 
-	return sendJSON(requestStr, jsonStr, log)
+	return sendJSON(requestStr, jsonStr, log, keyHash)
 }

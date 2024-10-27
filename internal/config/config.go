@@ -14,6 +14,7 @@ type ConfigServer struct { //nolint:govet //no need for opimization
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DSN             string `env:"DATABASE_DSN"`
+	SignKey         string `env:"KEY"`
 }
 
 func NewConfigServer() (*ConfigServer, error) {
@@ -27,6 +28,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "File store path, empty - without store")
 	flag.BoolVar(&config.Restore, "r", true, "Needs restore on start")
 	flag.StringVar(&config.DSN, "d", "", "Database string")
+	flag.StringVar(&config.SignKey, "k", "", "SighHash Key")
 	flag.Parse()
 
 	// environment override
@@ -40,6 +42,8 @@ func NewConfigServer() (*ConfigServer, error) {
 
 type ConfigAgent struct {
 	HostString     string `env:"ADDRESS"`
+	SignKey        string `env:"KEY"`
+	LogLevel       string `env:"LOG_LEVEL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 }
@@ -52,6 +56,8 @@ func NewConfigAgent() (*ConfigAgent, error) {
 	flag.StringVar(&config.HostString, "a", `localhost:8080`, "HTTP server endpoint")
 	flag.IntVar(&config.PollInterval, "p", 2, "Poll interval")
 	flag.IntVar(&config.ReportInterval, "r", 10, "Report interval")
+	flag.StringVar(&config.SignKey, "k", "", "SighHash Key")
+	flag.StringVar(&config.LogLevel, "l", `error`, "Log level")
 	flag.Parse()
 
 	// environment override

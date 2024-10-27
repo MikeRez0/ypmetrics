@@ -7,6 +7,7 @@ import (
 	"html/template"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +27,7 @@ type MetricsHandler struct {
 	Store    Repository
 	Template *template.Template
 	Log      *zap.Logger
+	Signer   *signer.Signer
 }
 
 //go:embed "templates/metrics.html"

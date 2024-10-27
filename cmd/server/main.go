@@ -14,6 +14,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
 
 func main() {
@@ -85,6 +86,10 @@ func run() error {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
 	r := setupRouter(h, logger.LoggerWithComponent(mylog, "handlers"))
+
+	if conf.SignKey != "" {
+		h.Signer = signer.NewSigner(conf.SignKey)
+	}
 
 	err = r.Run(conf.HostString)
 	if !errors.Is(err, http.ErrServerClosed) {

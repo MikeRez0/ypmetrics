@@ -162,6 +162,15 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 		return
 	}
 
+	if mh.Signer != nil {
+		h, err := mh.Signer.GetHashJSON(metric)
+		if err != nil {
+			handleError(c, http.StatusInternalServerError, err, mh.Log, "Error calculating hash")
+			return
+		}
+		c.Header("HashSHA256", h)
+	}
+
 	c.JSON(http.StatusOK, metric)
 }
 
@@ -188,8 +197,6 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 			return
 		}
 		metric.Value = (*float64)(&value)
-		c.JSON(http.StatusOK, metric)
-
 	case model.CounterType:
 		value, err := mh.Store.GetCounter(c, metric.ID)
 		if err != nil {
@@ -199,12 +206,21 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 			return
 		}
 		metric.Delta = (*int64)(&value)
-		c.JSON(http.StatusOK, metric)
 	default:
 		// _ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metric.MType))
 		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, "")
 		return
 	}
+
+	if mh.Signer != nil {
+		h, err := mh.Signer.GetHashJSON(metric)
+		if err != nil {
+			handleError(c, http.StatusInternalServerError, err, mh.Log, "Error calculating hash")
+			return
+		}
+		c.Header("HashSHA256", h)
+	}
+	c.JSON(http.StatusOK, metric)
 }
 
 func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
@@ -216,12 +232,34 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		return
 	}
 
+	hashReq := c.Request.Header.Get(model.HeaderSignerHash)
+	if mh.Signer != nil && hashReq == "" {
+		handleError(c, http.StatusBadRequest, errors.New("hash expected in header"), mh.Log, "")
+		return
+	}
+	if hashReq != "" {
+		mh.Log.Debug("Request hash", zap.String("Hash", hashReq))
+	}
+	if mh.Signer != nil && !mh.Signer.ValidateJSON(metrics, hashReq) {
+		handleError(c, http.StatusBadRequest, errors.New("hash value error"), mh.Log, "")
+		return
+	}
+
 	err := mh.Store.BatchUpdate(c, metrics)
 	if err != nil {
 		// err := c.AbortWithError(http.StatusInternalServerError, err)
 		// mh.Log.Error("Error batch updating metrics ", zap.Error(err))
 		handleError(c, http.StatusInternalServerError, err, mh.Log, "Error batch updating metrics")
 		return
+	}
+
+	if mh.Signer != nil {
+		h, err := mh.Signer.GetHashJSON(metrics)
+		if err != nil {
+			handleError(c, http.StatusInternalServerError, err, mh.Log, "Error calculating hash")
+			return
+		}
+		c.Header(model.HeaderSignerHash, h)
 	}
 
 	c.JSON(http.StatusOK, metrics)
