@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
@@ -27,19 +28,65 @@ func Run() error {
 
 	var metricStore = NewMetricStore()
 
-	tickerPoll := time.NewTicker(time.Duration(conf.PollInterval) * time.Second)
-	tickerReport := time.NewTicker(time.Duration(conf.ReportInterval) * time.Second)
+	ctx := context.Background()
 
-	for {
-		select {
-		case <-tickerPoll.C:
-			poll(metricStore)
-		case <-tickerReport.C:
-			reportBatch(metricStore, conf.HostString, log, conf.SignKey)
-			clear(metricStore.MetricsGauge)
-			clear(metricStore.MetricsCounter)
-		}
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	jobStart(ctx, func() error {
+		poll(metricStore)
+		return nil
+	}, time.Duration(conf.PollInterval)*time.Second, 1, log.Named("Poll go metrics job"))
+
+	jobStart(ctx, func() error {
+		ReadGopsutilMetrics(metricStore)
+		return nil
+	}, time.Duration(conf.PollInterval)*time.Second, 1, log.Named("Poll gopsutil metrics job"))
+
+	jobStart(ctx, func() error {
+		reportBatch(metricStore, conf.HostString, log, conf.SignKey)
+		return nil
+	}, time.Duration(conf.ReportInterval)*time.Second, conf.RateLimit, log.Named("Report metrics job"))
+
+	wg.Wait()
+	return nil
+}
+
+// ticker with worker pool.
+func jobStart(ctx context.Context, job func() error, interval time.Duration, workers int, log *zap.Logger) {
+	jobFire := make(chan struct{})
+
+	for i := range workers {
+		i := i
+		go func(j chan struct{}) {
+			log.Debug(fmt.Sprintf("Worker %d init", i))
+			for {
+				select {
+				case <-j:
+					log.Debug(fmt.Sprintf("Worker %d start job", i))
+					err := job()
+					if err != nil {
+						log.Error("job finished with error", zap.Error(err))
+					}
+					log.Debug(fmt.Sprintf("Worker %d end job", i))
+				case <-ctx.Done():
+					log.Debug(fmt.Sprintf("Worker %d stopped", i))
+				}
+			}
+		}(jobFire)
 	}
+
+	ticker := time.NewTicker(interval)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				jobFire <- struct{}{}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 func poll(metricStore *MetricStore) {
@@ -53,7 +100,7 @@ func report(metricStore *MetricStore, serverURL string, log *zap.Logger, keyHash
 	serverURL = "http://" + serverURL
 
 	metricType := model.MetricType(model.CounterType)
-	for metricName, val := range metricStore.MetricsCounter {
+	for metricName, val := range metricStore.GetCounterMetrics() {
 		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
 		err := sendMetricJSON(serverURL, metric, log, keyHash)
@@ -63,7 +110,7 @@ func report(metricStore *MetricStore, serverURL string, log *zap.Logger, keyHash
 	}
 
 	metricType = model.MetricType(model.GaugeType)
-	for metricName, val := range metricStore.MetricsGauge {
+	for metricName, val := range metricStore.GetGaugeMetrics() {
 		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
 		err := sendMetricJSON(serverURL, metric, log, keyHash)
 		if err != nil {
@@ -78,12 +125,12 @@ func reportBatch(metricStore *MetricStore, serverURL string, log *zap.Logger, ke
 	metrics := make([]model.Metrics, 0)
 
 	metricType := model.MetricType(model.CounterType)
-	for metricName, val := range metricStore.MetricsCounter {
+	for metricName, val := range metricStore.GetCounterMetrics() {
 		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 		metrics = append(metrics, metric)
 	}
 	metricType = model.MetricType(model.GaugeType)
-	for metricName, val := range metricStore.MetricsGauge {
+	for metricName, val := range metricStore.GetGaugeMetrics() {
 		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
 		metrics = append(metrics, metric)
 	}
@@ -92,6 +139,8 @@ func reportBatch(metricStore *MetricStore, serverURL string, log *zap.Logger, ke
 	if err != nil {
 		log.Error("error sending guage metric json", zap.Error(err))
 	}
+
+	metricStore.Clear()
 }
 
 func sendJSON(requestStr string, jsonStr []byte, log *zap.Logger, keyHash string) error {
@@ -123,7 +172,7 @@ func sendJSON(requestStr string, jsonStr []byte, log *zap.Logger, keyHash string
 			return fmt.Errorf("bad response %v for request %s", resp.StatusCode, requestStr)
 		}
 		return nil
-	}, 3, log)
+	}, 3, log.Named("http request"))
 }
 
 func sendMetricJSON(serverURL string, metric model.Metrics, log *zap.Logger, keyHash string) error {

@@ -12,15 +12,15 @@ func TestReadRuntimeMetrics(t *testing.T) {
 	ms := NewMetricStore()
 	ReadRuntimeMetrics(ms)
 	for _, v := range runtimeMetricNames {
-		assert.Contains(t, ms.MetricsGauge, v)
+		assert.Contains(t, ms.GetGaugeMetrics(), v)
 	}
 }
 
 func Test_poll(t *testing.T) {
 	ms := NewMetricStore()
 	poll(ms)
-	assert.Contains(t, ms.MetricsCounter, "PollCount")
-	assert.Contains(t, ms.MetricsGauge, "RandomValue")
+	assert.Contains(t, ms.GetCounterMetrics(), "PollCount")
+	assert.Contains(t, ms.GetGaugeMetrics(), "RandomValue")
 }
 func Test_report(t *testing.T) {
 	ms := NewMetricStore()

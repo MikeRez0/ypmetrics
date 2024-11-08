@@ -11,7 +11,7 @@ import (
 type RetryFunc func() error
 
 func Retry(ctx context.Context, f RetryFunc, retryAttempts int, logger *zap.Logger) error {
-	const retryIntervalStep = 2
+	const retryIntervalStep = 3
 
 	var err error
 	for i := range 3 {

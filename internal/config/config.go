@@ -46,6 +46,7 @@ type ConfigAgent struct {
 	LogLevel       string `env:"LOG_LEVEL"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
+	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
 func NewConfigAgent() (*ConfigAgent, error) {
@@ -56,8 +57,9 @@ func NewConfigAgent() (*ConfigAgent, error) {
 	flag.StringVar(&config.HostString, "a", `localhost:8080`, "HTTP server endpoint")
 	flag.IntVar(&config.PollInterval, "p", 2, "Poll interval")
 	flag.IntVar(&config.ReportInterval, "r", 10, "Report interval")
+	flag.IntVar(&config.RateLimit, "l", 3, "Rate limit")
 	flag.StringVar(&config.SignKey, "k", "", "SighHash Key")
-	flag.StringVar(&config.LogLevel, "l", `error`, "Log level")
+	flag.StringVar(&config.LogLevel, "log", `error`, "Log level")
 	flag.Parse()
 
 	// environment override
