@@ -13,8 +13,6 @@ import (
 
 type Repository interface {
 	Metrics() []model.Metrics
-	MetricStrings() []struct{ Name, Value string }
-	StoreMetric(context context.Context, metric model.Metrics) error
 	UpdateGauge(context context.Context, metric string, value model.GaugeValue) (model.GaugeValue, error)
 	GetGauge(context context.Context, metric string) (model.GaugeValue, error)
 	UpdateCounter(context context.Context, metric string, value model.CounterValue) (model.CounterValue, error)

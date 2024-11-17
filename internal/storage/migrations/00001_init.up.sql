@@ -5,8 +5,8 @@ CREATE TABLE public.metric (
 	mtype int2 NOT NULL,
 	delta int8 NULL,
 	value float8 NULL,
+	updts timestamp NULL,
 	CONSTRAINT metric_pk PRIMARY KEY (id)
 );
-
 
 END TRANSACTION;

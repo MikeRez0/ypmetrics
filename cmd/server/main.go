@@ -62,8 +62,6 @@ func run() error {
 	case conf.DSN != "":
 		repo, err = storage.NewDBStorage(
 			conf.DSN,
-			conf.StoreInterval,
-			conf.Restore,
 			logger.LoggerWithComponent(mylog, "dbstorage"))
 		if err != nil {
 			return fmt.Errorf("error creating db repo: %w", err)

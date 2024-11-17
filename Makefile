@@ -35,7 +35,7 @@ yptestdbstart:
 
 .PHONY: yptest
 yptest: build-server build-agent
-	./.yptests/metricstest-windows-amd64.exe -test.v -test.run=$(test) \
+	./.yptests/metricstest -test.v -test.run=$(test) \
 	-binary-path cmd/server/server \
 	-agent-binary-path cmd/agent/agent \
 	-source-path=. \

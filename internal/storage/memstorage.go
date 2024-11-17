@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
@@ -20,10 +19,14 @@ func NewMemStorage() *MemStorage {
 }
 
 func (ms *MemStorage) Metrics() (res []model.Metrics) {
-	ms.MetricsCounter.Range(func(name, value any) bool {
+	ms.MetricsCounter.Range(func(key, value any) bool {
+		name, ok := key.(string)
+		if !ok {
+			return false
+		}
 		if val, ok := value.(model.CounterValue); ok {
-			res = append(res, model.Metrics{ //nolint:forcetypeassert //this is why
-				ID:    name.(string),
+			res = append(res, model.Metrics{
+				ID:    name,
 				MType: model.CounterType,
 				Delta: (*int64)(&val),
 			})
@@ -31,11 +34,15 @@ func (ms *MemStorage) Metrics() (res []model.Metrics) {
 		return true
 	})
 
-	ms.MetricsGauge.Range(func(name, value any) bool {
+	ms.MetricsGauge.Range(func(key, value any) bool {
+		name, ok := key.(string)
+		if !ok {
+			return false
+		}
 		if val, ok := value.(model.GaugeValue); ok {
 			// val := value.(float64)
-			res = append(res, model.Metrics{ //nolint:forcetypeassert //this is why
-				ID:    name.(string),
+			res = append(res, model.Metrics{
+				ID:    name,
 				MType: model.GaugeType,
 				Value: (*float64)(&val),
 			})
@@ -56,30 +63,6 @@ func (ms *MemStorage) StoreMetric(ctx context.Context, metric model.Metrics) err
 	}
 
 	return nil
-}
-
-func (ms *MemStorage) MetricStrings() (res []struct{ Name, Value string }) {
-	ms.MetricsCounter.Range(func(name, value any) bool {
-		if val, ok := value.(model.CounterValue); ok {
-			res = append(res, struct { //nolint:forcetypeassert //this is why
-				Name  string
-				Value string
-			}{name.(string), fmt.Sprint(val)})
-		}
-		return true
-	})
-
-	ms.MetricsGauge.Range(func(name, value any) bool {
-		if val, ok := value.(model.GaugeValue); ok {
-			res = append(res, struct { //nolint:forcetypeassert //this is why
-				Name  string
-				Value string
-			}{name.(string), strconv.FormatFloat(float64(val), 'f', 5, 64)})
-		}
-		return true
-	})
-
-	return res
 }
 
 func (ms *MemStorage) UpdateGauge(ctx context.Context,
