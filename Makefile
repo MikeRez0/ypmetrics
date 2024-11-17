@@ -4,7 +4,7 @@ current_dir := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 .PHONY: golangci-lint-run
 golangci-lint-run:
 	-docker run --rm -v .:/source -v $(GOLANGCI_LINT_CACHE):/root/.cache -w //source golangci/golangci-lint golangci-lint run -c .golangci.yml
-	-bash -c 'cat ./golangci-lint/report-unformatted.json | jq > ./golangci-lint/report.json'
+	-bash -c 'cat ./.golangci-lint/report-unformatted.json | jq > ./.golangci-lint/report.json'
 
 
 .PHONY: build-server
