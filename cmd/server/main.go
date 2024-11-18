@@ -55,6 +55,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
+	mylog.Info(fmt.Sprintf("start server with config: %v", conf))
 
 	var repo handlers.Repository
 

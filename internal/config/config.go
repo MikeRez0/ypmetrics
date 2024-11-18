@@ -23,7 +23,7 @@ func NewConfigServer() (*ConfigServer, error) {
 
 	// cmd string params
 	flag.StringVar(&config.HostString, "a", `localhost:8080`, "HTTP server endpoint")
-	flag.StringVar(&config.LogLevel, "l", `error`, "Log level")
+	flag.StringVar(&config.LogLevel, "l", `debug`, "Log level")
 	flag.IntVar(&config.StoreInterval, "i", 300, "File store interval, 0 - synchrose")
 	flag.StringVar(&config.FileStoragePath, "f", "/tmp/metrics-db.json", "File store path, empty - without store")
 	flag.BoolVar(&config.Restore, "r", true, "Needs restore on start")

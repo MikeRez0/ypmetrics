@@ -26,6 +26,8 @@ func Run() error {
 
 	log := logger.GetLogger(conf.LogLevel)
 
+	log.Info(fmt.Sprintf("start agent with config: %v", conf))
+
 	var metricStore = NewMetricStore()
 
 	ctx := context.Background()
@@ -56,7 +58,7 @@ func Run() error {
 func jobStart(ctx context.Context, job func() error, interval time.Duration, workers int, log *zap.Logger) {
 	jobFire := make(chan struct{})
 
-	for i := range workers {
+	for i := 0; i < workers; i++ {
 		i := i
 		go func(j chan struct{}) {
 			log.Debug(fmt.Sprintf("Worker %d init", i))
