@@ -36,7 +36,7 @@ run:
 output:
   formats:
     - format: json
-      path: golangci-lint/report-unformatted.json
+      path: .golangci-lint/report-unformatted.json
   # Print lines of code with issue.
   print-issued-lines: true
   # Print linter name in the end of issue text.
