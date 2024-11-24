@@ -66,21 +66,9 @@ func runMigrations(dsn string) error {
 func (ds *DBStorage) UpdateGauge(ctx context.Context,
 	metric string, value model.GaugeValue) (model.GaugeValue, error) {
 	err := retrier.Retry(ctx, func() error {
-		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
-		if err != nil {
-			return fmt.Errorf("error starting transaction: %w", err)
-		}
-
-		defer func() {
-			err := tx.Rollback(ctx)
-			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-				ds.log.Error("error while rollback", zap.Error(err))
-			}
-		}()
-
 		mt := model.MetricType(model.GaugeType)
 
-		_, err = tx.Exec(ctx,
+		_, err := ds.pool.Exec(ctx,
 			`INSERT INTO "metric" ("id", "mtype", "value", "updts")
 			VALUES ($1, $2, $3, $4);`,
 			metric, mt, value, time.Now())
@@ -88,10 +76,6 @@ func (ds *DBStorage) UpdateGauge(ctx context.Context,
 			return fmt.Errorf("error inserting metric: %w", err)
 		}
 
-		err = tx.Commit(ctx)
-		if err != nil {
-			return fmt.Errorf("error commiting transaction: %w", err)
-		}
 		return nil
 	}, 3, ds.log)
 
@@ -107,21 +91,9 @@ func (ds *DBStorage) UpdateCounter(ctx context.Context,
 	newVal := value
 
 	err := retrier.Retry(ctx, func() error {
-		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
-		if err != nil {
-			return fmt.Errorf("error starting transaction: %w", err)
-		}
-
-		defer func() {
-			err := tx.Rollback(ctx)
-			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-				ds.log.Error("error while rollback", zap.Error(err))
-			}
-		}()
-
 		mt := model.MetricType(model.GaugeType)
 
-		row := tx.QueryRow(ctx,
+		row := ds.pool.QueryRow(ctx,
 			`INSERT INTO metric
 				(id, mtype, delta, updts)
 				values ($1, $2, $3, $4)
@@ -129,15 +101,11 @@ func (ds *DBStorage) UpdateCounter(ctx context.Context,
 				SET delta= metric.delta + EXCLUDED.delta
 				RETURNING delta;`,
 			metric, mt, value, time.Now())
-		err = row.Scan(&newVal)
+		err := row.Scan(&newVal)
 		if err != nil {
 			return fmt.Errorf("error inserting metric: %w", err)
 		}
 
-		err = tx.Commit(ctx)
-		if err != nil {
-			return fmt.Errorf("error commiting transaction: %w", err)
-		}
 		return nil
 	}, 3, ds.log)
 
@@ -180,6 +148,9 @@ func (ds *DBStorage) readMetrics(ctx context.Context, id string) ([]model.Metric
 			return nil, fmt.Errorf("error reading metric: %w", err)
 		}
 		metricsList = append(metricsList, metric)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading metric: %w", err)
 	}
 
 	ds.log.Debug("End reading metrics from database")
