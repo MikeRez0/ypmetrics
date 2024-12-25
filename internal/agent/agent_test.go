@@ -3,40 +3,40 @@ package agent
 import (
 	"testing"
 
+	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReadRuntimeMetrics(t *testing.T) {
-	ms := NewMetricStore()
-	ReadRuntimeMetrics(ms)
+	app := NewAgentApp(config.ConfigAgent{}, logger.GetLogger("info"))
+	app.ReadRuntimeMetrics()
 	for _, v := range runtimeMetricNames {
-		assert.Contains(t, ms.GetGaugeMetrics(), v)
+		assert.Contains(t, app.metrics.GetGaugeMetrics(), v)
 	}
 }
 
 func Test_poll(t *testing.T) {
-	ms := NewMetricStore()
-	poll(ms)
-	assert.Contains(t, ms.GetCounterMetrics(), "PollCount")
-	assert.Contains(t, ms.GetGaugeMetrics(), "RandomValue")
+	app := NewAgentApp(config.ConfigAgent{}, logger.GetLogger("info"))
+	app.Poll()
+	assert.Contains(t, app.metrics.GetCounterMetrics(), "PollCount")
+	assert.Contains(t, app.metrics.GetGaugeMetrics(), "RandomValue")
 }
 func Test_report(t *testing.T) {
 	ms := NewMetricStore()
 	ms.PushCounterMetric("TestCounter", model.CounterValue(10))
 	ms.PushGaugeMetric("TestGauge", model.GaugeValue(15))
 
-	log, _ := logger.Initialize("info")
-
 	tests := []struct {
 		name string
 	}{
 		{name: "test1"},
 	}
+	app := NewAgentApp(config.ConfigAgent{}, logger.GetLogger("info"))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report(ms, `localhost:8080`, log, "")
+			app.Report()
 		})
 	}
 }

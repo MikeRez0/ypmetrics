@@ -112,15 +112,23 @@ func (ms *MemStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) 
 		var err error
 		switch metric.MType {
 		case model.GaugeType:
+			if metric.Value == nil {
+				err = model.NewErrBadValue("value is nil for metric: " + metric.ID)
+				break
+			}
 			_, err = ms.UpdateGauge(ctx, metric.ID, model.GaugeValue(*metric.Value))
 		case model.CounterType:
+			if metric.Delta == nil {
+				err = model.NewErrBadValue("delta is not nil for metric: " + metric.ID)
+				break
+			}
 			_, err = ms.UpdateCounter(ctx, metric.ID, model.CounterValue(*metric.Delta))
 		default:
-			err = fmt.Errorf("unrecognized metric type %s", metric.MType)
+			err = model.NewErrBadValue(fmt.Sprintf("unrecognized metric type %s", metric.MType))
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("batch update error: %w", err)
 		}
 	}
 	return nil

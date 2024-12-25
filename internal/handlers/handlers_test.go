@@ -1,4 +1,4 @@
-package main
+package handlers_test
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestMetricsHandler_Server(t *testing.T) {
@@ -25,6 +25,10 @@ func TestMetricsHandler_Server(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, model.GaugeValue(10), gval)
 
+		gval, err = store.UpdateGauge(context.Background(), "MetricGauge2", 20)
+		assert.NoError(t, err)
+		assert.Equal(t, model.GaugeValue(20), gval)
+
 		return store
 	}
 
@@ -32,7 +36,8 @@ func TestMetricsHandler_Server(t *testing.T) {
 		Store: testMemStorage(),
 	}
 
-	router := setupRouter(mh, zap.L())
+	l := logger.GetLogger("debug")
+	router := handlers.SetupRouter(mh, l)
 	srv := httptest.NewServer(router)
 
 	tests := getTestData()

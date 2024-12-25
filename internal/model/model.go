@@ -22,10 +22,10 @@ type GaugeValue float64
 type CounterValue int64
 
 type Metrics struct {
-	MType MetricType `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64     `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64   `json:"value,omitempty"` // значение метрики в случае передачи gauge
-	ID    string     `json:"id"`              // имя метрики
+	MType MetricType `json:"type" binding:"required"` // параметр, принимающий значение gauge или counter
+	Delta *int64     `json:"delta,omitempty"`         // значение метрики в случае передачи counter
+	Value *float64   `json:"value,omitempty"`         // значение метрики в случае передачи gauge
+	ID    string     `json:"id" binding:"required"`   // имя метрики
 }
 
 func (mt MetricType) Value() (driver.Value, error) {
@@ -64,4 +64,15 @@ func (mt *MetricType) Scan(value any) error {
 	}
 
 	return fmt.Errorf("failed to scan value %s", value)
+}
+
+type BadValueError struct {
+	err string
+}
+
+func NewErrBadValue(err string) BadValueError {
+	return BadValueError{err: err}
+}
+func (e BadValueError) Error() string {
+	return e.err
 }
