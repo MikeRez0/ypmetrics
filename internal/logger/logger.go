@@ -2,11 +2,29 @@ package logger
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
+
+var (
+	logger *zap.Logger
+	once   sync.Once
+)
+
+func GetLogger(level string) *zap.Logger {
+	once.Do(func() {
+		var err error
+		logger, err = Initialize(level)
+		if err != nil {
+			panic(fmt.Sprintf("error init logger: %v", err))
+		}
+	})
+
+	return logger
+}
 
 func Initialize(level string) (*zap.Logger, error) {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel

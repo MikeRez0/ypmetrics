@@ -14,6 +14,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
 
 func main() {
@@ -29,9 +30,6 @@ func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	r.Use(logger.GinLogger(mylog))
 	r.HandleMethodNotAllowed = true
 
-	// не получилось использовать свой мидлвар, потому что в ответ
-	// встраивалось application/x-gzip, игнорируя "мои" заголовки
-	// обсудить на 1-1
 	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
 	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
@@ -40,6 +38,9 @@ func setupRouter(h *handlers.MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	jsonGroup.Use(handlers.GinCompress(logger.LoggerWithComponent(mylog, "compress")))
 	jsonGroup.POST("/update/", h.UpdateMetricJSON)
 	jsonGroup.POST("/value/", h.GetMetricJSON)
+	jsonGroup.POST("/updates/", h.BatchUpdateMetricsJSON)
+
+	r.GET("/ping", h.PingDB)
 
 	return r
 }
@@ -54,10 +55,19 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
+	mylog.Info(fmt.Sprintf("start server with config: %v", conf))
 
 	var repo handlers.Repository
 
-	if conf.FileStoragePath != "" {
+	switch {
+	case conf.DSN != "":
+		repo, err = storage.NewDBStorage(
+			conf.DSN,
+			logger.LoggerWithComponent(mylog, "dbstorage"))
+		if err != nil {
+			return fmt.Errorf("error creating db repo: %w", err)
+		}
+	case conf.FileStoragePath != "":
 		repo, err = storage.NewFileStorage(
 			conf.FileStoragePath,
 			conf.StoreInterval,
@@ -66,14 +76,19 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("error creating file repo: %w", err)
 		}
-	} else {
+	default:
 		repo = storage.NewMemStorage()
 	}
+
 	h, err := handlers.NewMetricsHandler(repo, logger.LoggerWithComponent(mylog, "handlers"))
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
 	r := setupRouter(h, logger.LoggerWithComponent(mylog, "handlers"))
+
+	if conf.SignKey != "" {
+		h.Signer = signer.NewSigner(conf.SignKey)
+	}
 
 	err = r.Run(conf.HostString)
 	if !errors.Is(err, http.ErrServerClosed) {

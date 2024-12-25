@@ -1,9 +1,12 @@
 package agent
 
 import (
+	"fmt"
 	"runtime"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 var runtimeMetricNames []string = []string{
@@ -48,6 +51,19 @@ func ReadRuntimeMetrics(metrics *MetricStore) *MetricStore {
 	metrics.PushGaugeMetric(`StackSys`, model.GaugeValue(memStats.StackSys))
 	metrics.PushGaugeMetric(`Sys`, model.GaugeValue(memStats.Sys))
 	metrics.PushGaugeMetric(`TotalAlloc`, model.GaugeValue(memStats.TotalAlloc))
+
+	return metrics
+}
+
+func ReadGopsutilMetrics(metrics *MetricStore) *MetricStore {
+	v, _ := mem.VirtualMemory()
+	c, _ := cpu.Percent(0, true)
+
+	metrics.PushGaugeMetric("TotalMemory", model.GaugeValue(v.Total))
+	metrics.PushGaugeMetric("FreeMemory", model.GaugeValue(v.Free))
+	for i, u := range c {
+		metrics.PushGaugeMetric(fmt.Sprintf("CPUutilization%d", i), model.GaugeValue(u))
+	}
 
 	return metrics
 }

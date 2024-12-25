@@ -17,6 +17,8 @@ cmd/agent/agent
 cmd/server/main
 cmd/server/server
 
+.yptests/
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 
@@ -25,7 +27,10 @@ vendor/
 .vscode
 
 #golangci-lint
-golangci-lint/
+.golangci-lint/
 
 #Temp files
 .tmp
+
+#data files
+scripts/db/data/

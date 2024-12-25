@@ -1,28 +1,31 @@
 package handlers
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"html/template"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 	"go.uber.org/zap"
 )
 
 type Repository interface {
 	Metrics() []model.Metrics
-	MetricStrings() []struct{ Name, Value string }
-	StoreMetric(metric model.Metrics) error
-	UpdateGauge(metric string, value model.GaugeValue) (model.GaugeValue, error)
-	GetGauge(metric string) (model.GaugeValue, error)
-	UpdateCounter(metric string, value model.CounterValue) (model.CounterValue, error)
-	GetCounter(metric string) (model.CounterValue, error)
+	UpdateGauge(context context.Context, metric string, value model.GaugeValue) (model.GaugeValue, error)
+	GetGauge(context context.Context, metric string) (model.GaugeValue, error)
+	UpdateCounter(context context.Context, metric string, value model.CounterValue) (model.CounterValue, error)
+	GetCounter(context context.Context, metric string) (model.CounterValue, error)
+	BatchUpdate(ctx context.Context, metrics []model.Metrics) error
+	Ping() error
 }
 
 type MetricsHandler struct {
 	Store    Repository
 	Template *template.Template
 	Log      *zap.Logger
+	Signer   *signer.Signer
 }
 
 //go:embed "templates/metrics.html"

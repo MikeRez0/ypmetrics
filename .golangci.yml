@@ -36,6 +36,7 @@ run:
 output:
   formats:
     - format: json
+      path: .golangci-lint/report-unformatted.json
   # Print lines of code with issue.
   print-issued-lines: true
   # Print linter name in the end of issue text.
@@ -364,7 +365,8 @@ linters-settings:
     # - "default": report only the default slog logger
     no-global: "all"
     # Enforce using methods that accept a context.
-    context-only: true
+    # context-only: true
+    context: "scope"
     # Enforce using static values for log messages.
     static-msg: false
     # Enforce using constants instead of raw keys.
@@ -486,7 +488,7 @@ linters:
     - errcheck
     - errname
     - errorlint
-    - execinquery
+    # - execinquery
     - exhaustive
     - forcetypeassert
     - gocheckcompilerdirectives
@@ -495,7 +497,7 @@ linters:
     - godot
     - gofmt
     - goimports
-    - gomnd
+    # - gomnd
     - goprintffuncname
     - gosec
     - gosimple
