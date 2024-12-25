@@ -268,6 +268,5 @@ func handleError(c *gin.Context, statusCode int, err error, logger *zap.Logger, 
 		} else {
 			logger.Error("error (resp status code: "+strconv.Itoa(statusCode)+")", zap.Error(err))
 		}
-
 	}
 }

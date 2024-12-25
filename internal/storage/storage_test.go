@@ -49,6 +49,7 @@ func TestMain(m *testing.M) {
 }
 
 func runHandlerTests(t *testing.T, router *gin.Engine) {
+	t.Helper()
 	srv := httptest.NewServer(router)
 
 	tests := getTestData()
