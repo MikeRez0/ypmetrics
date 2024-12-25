@@ -177,14 +177,11 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	var metric model.Metrics
 	if err := c.ShouldBindJSON(&metric); err != nil {
-		// _ = c.Error(err)
-		// c.AbortWithStatus(http.StatusBadRequest)
 		handleError(c, http.StatusBadRequest, err, mh.Log, "Bad request")
 		return
 	}
 
 	if metric.ID == "" {
-		// c.AbortWithStatus(http.StatusNotFound)
 		handleError(c, http.StatusNotFound, errors.New("metric not found"), mh.Log, "error")
 	}
 
@@ -192,7 +189,6 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	case model.GaugeType:
 		value, err := mh.Store.GetGauge(c, metric.ID)
 		if err != nil {
-			// _ = c.AbortWithError(http.StatusNotFound, err)
 			handleError(c, http.StatusNotFound, err, mh.Log, "error")
 			return
 		}
@@ -200,14 +196,11 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	case model.CounterType:
 		value, err := mh.Store.GetCounter(c, metric.ID)
 		if err != nil {
-			// err = c.AbortWithError(http.StatusNotFound, err)
-			// log.Println(err)
 			handleError(c, http.StatusNotFound, err, mh.Log, "error")
 			return
 		}
 		metric.Delta = (*int64)(&value)
 	default:
-		// _ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s not a metric type", metric.MType))
 		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, "")
 		return
 	}
@@ -247,8 +240,10 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 
 	err := mh.Store.BatchUpdate(c, metrics)
 	if err != nil {
-		// err := c.AbortWithError(http.StatusInternalServerError, err)
-		// mh.Log.Error("Error batch updating metrics ", zap.Error(err))
+		if errors.As(err, &model.BadValueError{}) {
+			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
+		}
 		handleError(c, http.StatusInternalServerError, err, mh.Log, "Error batch updating metrics")
 		return
 	}
@@ -267,7 +262,12 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 
 func handleError(c *gin.Context, statusCode int, err error, logger *zap.Logger, message string) {
 	err = c.AbortWithError(statusCode, err)
-	if message != "" && logger != nil {
-		logger.Error(message, zap.Error(err))
+	if logger != nil {
+		if message != "" {
+			logger.Error(message, zap.Error(err))
+		} else {
+			logger.Error("error (resp status code: "+strconv.Itoa(statusCode)+")", zap.Error(err))
+		}
+
 	}
 }

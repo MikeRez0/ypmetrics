@@ -50,6 +50,22 @@ func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Lo
 	return &fs, nil
 }
 
+func (fs *FileStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) error {
+	err := fs.MemStorage.BatchUpdate(ctx, metrics)
+	if err != nil {
+		return err
+	}
+
+	if fs.syncSave {
+		err := fs.WriteMetrics()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (fs *FileStorage) UpdateGauge(ctx context.Context,
 	metric string, value model.GaugeValue) (model.GaugeValue, error) {
 	val, err := fs.MemStorage.UpdateGauge(ctx, metric, value)

@@ -1,4 +1,4 @@
-package main
+package handlers_test
 
 import "net/http"
 
@@ -68,6 +68,12 @@ func getTestData() []testData {
 			want:    want{code: 404},
 		},
 		{
+			name:    "Neg Get No metric",
+			request: "/value/counter/",
+			method:  http.MethodGet,
+			want:    want{code: 404},
+		},
+		{
 			name:    "Neg method not allowed",
 			request: "/update/counter/test/123",
 			method:  http.MethodPatch,
@@ -92,6 +98,63 @@ func getTestData() []testData {
 			`},
 		},
 		{
+			name:    "Pos udpate Batch JSON",
+			request: "/updates/",
+			requestBody: `
+			[{"id":"testCounterJSON",
+			"type":"counter",
+			"delta":5
+			},{"id":"testCounterJSON2",
+			"type":"counter",
+			"delta":52
+			}]
+			`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want: want{code: 200, contentType: "application/json", body: `
+			[{"id":"testCounterJSON",
+			"type":"counter",
+			"delta":5
+			},{"id":"testCounterJSON2",
+			"type":"counter",
+			"delta":52
+			}]
+			`},
+		},
+		{
+			name:    "Neg 1 udpate Batch JSON",
+			request: "/updates/",
+			requestBody: `
+			[{"id":"testCounterJSON",
+			"type":"counter",
+			"delta":qwe
+			},{"id":"testCounterJSON2",
+			"type":"counter",
+			"delta":52
+			}]
+			`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want:        want{code: 400},
+		},
+		{
+			name:    "Neg 2 udpate Batch JSON",
+			request: "/updates/",
+			requestBody: `
+			[{"id":"testCounterJSON",
+			"type":"value",
+			"delta":123
+			},
+			{"id":"testCounterJSON2",
+			"type":"counter",
+			"delta":52
+			}]
+			`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want:        want{code: 400},
+		},
+		{
 			name:    "Pos Get Counter JSON",
 			request: "/value/",
 			requestBody: `
@@ -107,6 +170,42 @@ func getTestData() []testData {
 			"delta":5
 			}
 			`},
+		},
+		{
+			name:    "Neg Get Counter JSON - bad type",
+			request: "/value/",
+			requestBody: `
+			{"id":"MetricCounter",
+			"type":"value"
+			}
+			`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want:        want{code: 400},
+		},
+		{
+			name:    "Neg Get Counter JSON - bad json",
+			request: "/value/",
+			requestBody: `
+			{"i":"MetricCounter",
+			"typ":"value"
+			}
+			`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want:        want{code: 400},
+		},
+		{
+			name:    "Neg Get Counter JSON - not found",
+			request: "/value/",
+			requestBody: `
+			{"id":"MetricCounterNOTFOUND",
+			"type":"counter"
+			}
+			`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want:        want{code: 404},
 		},
 		{
 			name:    "Pos Get Gauge JSON",
@@ -125,5 +224,11 @@ func getTestData() []testData {
 			}
 			`},
 		},
+		// {
+		// 	name:    "Pos Get HTML",
+		// 	request: "/",
+		// 	method:  http.MethodGet,
+		// 	want:    want{code: 200, contentType: "text/html"},
+		// },
 	}
 }

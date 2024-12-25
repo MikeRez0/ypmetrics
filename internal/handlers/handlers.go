@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=./handlers.go -package mock -destination ./mock/handlers.go
 type Repository interface {
 	Metrics() []model.Metrics
 	UpdateGauge(context context.Context, metric string, value model.GaugeValue) (model.GaugeValue, error)
