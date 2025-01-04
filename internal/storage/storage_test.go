@@ -37,7 +37,7 @@ func shutdown() {
 	}
 	err := os.Remove("test.js")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 

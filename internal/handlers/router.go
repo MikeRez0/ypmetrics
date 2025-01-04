@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -24,6 +25,8 @@ func SetupRouter(h *MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	jsonGroup.POST("/updates/", h.BatchUpdateMetricsJSON)
 
 	r.GET("/ping", h.PingDB)
+
+	pprof.Register(r)
 
 	return r
 }

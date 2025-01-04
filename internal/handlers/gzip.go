@@ -50,14 +50,23 @@ type compressWriter struct {
 }
 
 func newCompressWriter(w gin.ResponseWriter) *compressWriter {
+	writer, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+	if err != nil {
+		panic(err)
+	}
+
 	return &compressWriter{
 		ResponseWriter: w,
-		zw:             gzip.NewWriter(w),
+		zw:             writer,
 	}
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {
-	return c.zw.Write(p) //nolint:wrapcheck //error checked in base handler
+	if c.ResponseWriter.Status() < 300 {
+		return c.zw.Write(p) //nolint:wrapcheck //error checked in base handler
+	} else {
+		return c.ResponseWriter.Write(p) //nolint:wrapcheck //error checked in base handler
+	}
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
