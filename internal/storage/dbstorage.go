@@ -15,9 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"go.uber.org/zap"
+
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
-	"go.uber.org/zap"
 )
 
 type DBStorage struct {

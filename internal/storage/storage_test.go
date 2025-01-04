@@ -9,12 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MikeRez0/ypmetrics/internal/handlers"
-	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+
+	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
 
 var dbtest *TestDBInstance

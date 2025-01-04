@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/gin-gonic/gin"
+
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 func (mh *MetricsHandler) MetricListView(c *gin.Context) {

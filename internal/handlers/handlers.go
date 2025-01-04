@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"html/template"
 
+	"go.uber.org/zap"
+
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
-	"go.uber.org/zap"
 )
 
 //go:generate mockgen -source=./handlers.go -package mock -destination ./mock/handlers.go

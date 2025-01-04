@@ -5,12 +5,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
-	"github.com/go-resty/resty/v2"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMetricsHandler_Server(t *testing.T) {

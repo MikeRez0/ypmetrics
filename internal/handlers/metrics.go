@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 const (

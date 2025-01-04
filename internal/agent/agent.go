@@ -9,13 +9,14 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+	"go.uber.org/zap"
+
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
-	"github.com/shirou/gopsutil/v4/cpu"
-	"github.com/shirou/gopsutil/v4/mem"
-	"go.uber.org/zap"
 )
 
 var runtimeMetricNames []string = []string{

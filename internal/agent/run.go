@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
-	"go.uber.org/zap"
 )
 
 func Run() error {

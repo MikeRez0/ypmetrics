@@ -3,10 +3,11 @@ package agent
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestReadRuntimeMetrics(t *testing.T) {

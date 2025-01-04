@@ -9,8 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/MikeRez0/ypmetrics/internal/model"
 	"go.uber.org/zap"
+
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 type FileStorage struct {
