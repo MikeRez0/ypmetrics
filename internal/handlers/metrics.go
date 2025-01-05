@@ -18,6 +18,7 @@ const (
 	cMetricTypeNameNotFound = "%s not a metric type"
 )
 
+// UpdateMetricPlain - Update metric by plain text request.
 func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 	var (
 		metricType = c.Param("metricType")
@@ -61,6 +62,7 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// GetMetricPlain - Get metric by plain text request.
 func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 	var (
 		metricType = c.Param("metricType")
@@ -101,6 +103,7 @@ func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// UpdateMetricJSON - Update metric by JSON request.
 func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 	var metric model.Metrics
 	if err := c.ShouldBindJSON(&metric); err != nil {
@@ -146,6 +149,7 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 	c.JSON(http.StatusOK, metric)
 }
 
+// GetMetricJSON - Get metric by JSON request.
 func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	var metric model.Metrics
 	if err := c.ShouldBindJSON(&metric); err != nil {
@@ -188,6 +192,7 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	c.JSON(http.StatusOK, metric)
 }
 
+// BatchUpdateMetricsJSON - Update multiple metrics by JSON request.
 func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 	var metrics []model.Metrics
 	if err := c.ShouldBindJSON(&metrics); err != nil {
@@ -232,6 +237,7 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 	c.JSON(http.StatusOK, metrics)
 }
 
+// handleError - helper for error handle.
 func handleError(c *gin.Context, statusCode int, err error, logger *zap.Logger, message string) {
 	err = c.AbortWithError(statusCode, err)
 	if logger != nil {

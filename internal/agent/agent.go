@@ -29,6 +29,7 @@ var runtimeMetricNames []string = []string{
 	`Mallocs`, `NextGC`, `NumForcedGC`, `NumGC`, `OtherSys`, `PauseTotalNs`,
 	`StackInuse`, `StackSys`, `Sys`, `TotalAlloc`}
 
+// AgentApp - Agent application.
 type AgentApp struct {
 	log     *zap.Logger
 	metrics *MetricStore
@@ -37,6 +38,7 @@ type AgentApp struct {
 	keyHash string
 }
 
+// NewAgentApp - Create new agent application.
 func NewAgentApp(conf config.ConfigAgent, log *zap.Logger) *AgentApp {
 	r := retrier.NewRetrier(log.Named("Retrier"), 3, 3)
 	return &AgentApp{
@@ -48,6 +50,16 @@ func NewAgentApp(conf config.ConfigAgent, log *zap.Logger) *AgentApp {
 	}
 }
 
+// ReadRuntimeMetrics - read runtime metrics.
+//
+// Metric list:
+// `Alloc`, `BuckHashSys`, `Frees`,
+// `GCCPUFraction`, `GCSys`, `HeapAlloc`,
+// `HeapIdle`, `HeapInuse`, `HeapObjects`, `HeapReleased`,
+// `HeapSys`, `LastGC`, `Lookups`, `MCacheInuse`,
+// `MCacheSys`, `MSpanInuse`, `MSpanSys`,
+// `Mallocs`, `NextGC`, `NumForcedGC`, `NumGC`, `OtherSys`, `PauseTotalNs`,
+// `StackInuse`, `StackSys`, `Sys`, `TotalAlloc`.
 func (a *AgentApp) ReadRuntimeMetrics() *MetricStore {
 	var memStats runtime.MemStats
 
@@ -84,6 +96,9 @@ func (a *AgentApp) ReadRuntimeMetrics() *MetricStore {
 	return a.metrics
 }
 
+// ReadGopsutilMetrics - read metrics:
+//
+// TotalMemory, FreeMemory, CPUutilization(i) for every CPU-core.
 func (a *AgentApp) ReadGopsutilMetrics() *MetricStore {
 	v, _ := mem.VirtualMemory()
 	c, _ := cpu.Percent(0, true)
@@ -97,6 +112,11 @@ func (a *AgentApp) ReadGopsutilMetrics() *MetricStore {
 	return a.metrics
 }
 
+// Poll - read metrics and add metrics:
+//
+// PollCount = 1
+//
+// RandomValue = random value 0..1000.
 func (a *AgentApp) Poll() {
 	a.ReadRuntimeMetrics()
 
@@ -104,6 +124,7 @@ func (a *AgentApp) Poll() {
 	a.metrics.PushGaugeMetric("RandomValue", model.GaugeValue(rand.Float64()*1_000))
 }
 
+// Report - Send metrics to server (one-by-one-request).
 func (a *AgentApp) Report() {
 	serverURL := "http://" + a.host
 
@@ -111,7 +132,7 @@ func (a *AgentApp) Report() {
 	for metricName, val := range a.metrics.GetCounterMetrics() {
 		metric := model.Metrics{ID: metricName, MType: metricType, Delta: (*int64)(&val)}
 
-		err := a.SendMetricJSON(serverURL, metric)
+		err := a.sendMetricJSON(serverURL, metric)
 		if err != nil {
 			a.log.Error("error sending counter metric json", zap.Error(err))
 		}
@@ -120,13 +141,14 @@ func (a *AgentApp) Report() {
 	metricType = model.MetricType(model.GaugeType)
 	for metricName, val := range a.metrics.GetGaugeMetrics() {
 		metric := model.Metrics{ID: metricName, MType: metricType, Value: (*float64)(&val)}
-		err := a.SendMetricJSON(serverURL, metric)
+		err := a.sendMetricJSON(serverURL, metric)
 		if err != nil {
 			a.log.Error("error sending guage metric json", zap.Error(err))
 		}
 	}
 }
 
+// ReportBatch - Send metrics to server (all-in-one-request).
 func (a *AgentApp) ReportBatch() {
 	serverURL := "http://" + a.host
 
@@ -143,7 +165,7 @@ func (a *AgentApp) ReportBatch() {
 		metrics = append(metrics, metric)
 	}
 
-	err := a.SendMetricBatchJSON(serverURL, metrics)
+	err := a.sendMetricBatchJSON(serverURL, metrics)
 	if err != nil {
 		a.log.Error("error sending guage metric json", zap.Error(err))
 	}
@@ -155,7 +177,7 @@ func checkCanRetry(err error) bool {
 	return true
 }
 
-func (a *AgentApp) SendJSON(requestStr string, jsonStr []byte) error {
+func (a *AgentApp) sendJSON(requestStr string, jsonStr []byte) error {
 	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return fmt.Errorf("error on %s : %w", requestStr, err)
@@ -187,7 +209,7 @@ func (a *AgentApp) SendJSON(requestStr string, jsonStr []byte) error {
 	}, checkCanRetry)
 }
 
-func (a *AgentApp) SendMetricJSON(serverURL string, metric model.Metrics) error {
+func (a *AgentApp) sendMetricJSON(serverURL string, metric model.Metrics) error {
 	requestStr := serverURL + "/update/"
 
 	jsonStr, err := json.Marshal(metric)
@@ -195,10 +217,10 @@ func (a *AgentApp) SendMetricJSON(serverURL string, metric model.Metrics) error 
 		return fmt.Errorf("erron while json encode: %w", err)
 	}
 
-	return a.SendJSON(requestStr, jsonStr)
+	return a.sendJSON(requestStr, jsonStr)
 }
 
-func (a *AgentApp) SendMetricBatchJSON(serverURL string, metrics []model.Metrics) error {
+func (a *AgentApp) sendMetricBatchJSON(serverURL string, metrics []model.Metrics) error {
 	requestStr := serverURL + "/updates/"
 
 	jsonStr, err := json.Marshal(metrics)
@@ -206,5 +228,5 @@ func (a *AgentApp) SendMetricBatchJSON(serverURL string, metrics []model.Metrics
 		return fmt.Errorf("erron while json encode: %w", err)
 	}
 
-	return a.SendJSON(requestStr, jsonStr)
+	return a.sendJSON(requestStr, jsonStr)
 }

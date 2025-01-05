@@ -12,6 +12,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 )
 
+// Run - run agent app with config.
 func Run() error {
 	conf, err := config.NewConfigAgent()
 	if err != nil {

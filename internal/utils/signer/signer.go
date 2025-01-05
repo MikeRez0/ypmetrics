@@ -1,3 +1,4 @@
+// Signer - util for create and verify hash for json.
 package signer
 
 import (
@@ -13,10 +14,12 @@ type Signer struct {
 	h hash.Hash
 }
 
+// NewSigner - create new signer.
 func NewSigner(key string) *Signer {
 	return &Signer{h: hmac.New(sha256.New, []byte(key))}
 }
 
+// WriteJSON - write json data.
 func (s *Signer) WriteJSON(data any) (int, error) {
 	ba, err := json.Marshal(data)
 	if err != nil {
@@ -25,15 +28,18 @@ func (s *Signer) WriteJSON(data any) (int, error) {
 	return s.h.Write(ba) //nolint //all ok
 }
 
+// Write - write binary data.
 func (s *Signer) Write(p []byte) (int, error) {
 	return s.h.Write(p) //nolint //all ok
 }
 
+// GetHash - calculata hash value.
 func (s *Signer) GetHash() string {
 	h := s.h.Sum(nil)
 	return base64.StdEncoding.EncodeToString(h) // hex.EncodeToString(h)
 }
 
+// GetHashJSON - wrapper: write json and return hash.
 func (s *Signer) GetHashJSON(data any) (string, error) {
 	s.Reset()
 
@@ -44,6 +50,8 @@ func (s *Signer) GetHashJSON(data any) (string, error) {
 
 	return s.GetHash(), nil
 }
+
+// GetHashBA - wrapper: write binary data and return hash.
 func (s *Signer) GetHashBA(data []byte) (string, error) {
 	s.Reset()
 
@@ -55,6 +63,7 @@ func (s *Signer) GetHashBA(data []byte) (string, error) {
 	return s.GetHash(), nil
 }
 
+// ValidateJSON - validate json data with hash.
 func (s *Signer) ValidateJSON(data any, h string) bool {
 	exp, err := s.GetHashJSON(data)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 )
 
+// SetupRouter - create gin router with handlers.
 func SetupRouter(h *MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())

@@ -7,6 +7,7 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// ConfigServer - config params for server.
 type ConfigServer struct { //nolint:govet //no need for opimization
 	HostString      string `env:"ADDRESS"`
 	LogLevel        string `env:"LOG_LEVEL"`
@@ -17,6 +18,7 @@ type ConfigServer struct { //nolint:govet //no need for opimization
 	SignKey         string `env:"KEY"`
 }
 
+// NewConfigServer - parse and create new server config.
 func NewConfigServer() (*ConfigServer, error) {
 	// null config
 	config := ConfigServer{}
@@ -40,6 +42,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	return &config, nil
 }
 
+// ConfigAgent - config params for agent.
 type ConfigAgent struct {
 	HostString     string `env:"ADDRESS"`
 	SignKey        string `env:"KEY"`
@@ -49,6 +52,7 @@ type ConfigAgent struct {
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
+// Parse and create new agent config
 func NewConfigAgent() (*ConfigAgent, error) {
 	// null config
 	config := ConfigAgent{}

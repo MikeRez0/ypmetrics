@@ -6,14 +6,19 @@ import (
 	"fmt"
 )
 
+// HeaderSignerHash - Header key in request for hash-body.
 const HeaderSignerHash = "HashSHA256"
 
+// GaugeType - name for gauge.
 const GaugeType = "gauge"
+
+// CounterType - name for counter.
 const CounterType = "counter"
 
+// Database keys for metric types.
 const (
-	CounterTypeDB = iota + 1
-	GaugeTypeDB
+	counterTypeDB = iota + 1
+	gaugeTypeDB
 )
 
 type MetricType string
@@ -21,6 +26,7 @@ type MetricType string
 type GaugeValue float64
 type CounterValue int64
 
+// Metrics - structure for metric value.
 type Metrics struct {
 	MType MetricType `json:"type" binding:"required"` // параметр, принимающий значение gauge или counter
 	Delta *int64     `json:"delta,omitempty"`         // значение метрики в случае передачи counter
@@ -31,9 +37,9 @@ type Metrics struct {
 func (mt MetricType) Value() (driver.Value, error) {
 	switch mt {
 	case CounterType:
-		return CounterTypeDB, nil
+		return counterTypeDB, nil
 	case GaugeType:
-		return GaugeTypeDB, nil
+		return gaugeTypeDB, nil
 	default:
 		return nil, fmt.Errorf(`unexpected value %s`, mt)
 	}
@@ -52,10 +58,10 @@ func (mt *MetricType) Scan(value any) error {
 		}
 
 		switch v {
-		case CounterTypeDB:
+		case counterTypeDB:
 			*mt = CounterType
 			return nil
-		case GaugeTypeDB:
+		case gaugeTypeDB:
 			*mt = GaugeType
 			return nil
 		default:

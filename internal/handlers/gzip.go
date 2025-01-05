@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GinCompress - middleware for handle gzip'ed requests.
 func GinCompress(log *zap.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ow := ctx.Writer

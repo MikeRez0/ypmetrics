@@ -14,10 +14,11 @@ var (
 	once   sync.Once
 )
 
+// GetLogger - create or return logger.
 func GetLogger(level string) *zap.Logger {
 	once.Do(func() {
 		var err error
-		logger, err = Initialize(level)
+		logger, err = initialize(level)
 		if err != nil {
 			panic(fmt.Sprintf("error init logger: %v", err))
 		}
@@ -26,7 +27,8 @@ func GetLogger(level string) *zap.Logger {
 	return logger
 }
 
-func Initialize(level string) (*zap.Logger, error) {
+// initialize - initialize logger with level.
+func initialize(level string) (*zap.Logger, error) {
 	// преобразуем текстовый уровень логирования в zap.AtomicLevel
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
@@ -45,6 +47,7 @@ func Initialize(level string) (*zap.Logger, error) {
 	return zl, nil
 }
 
+// GinLogger - GIN middleware for logging requests.
 func GinLogger(log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()

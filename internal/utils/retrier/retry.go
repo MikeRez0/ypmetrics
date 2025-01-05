@@ -1,3 +1,6 @@
+// Retrier - util for retry job.
+//
+// Will retry `attempts` times with progressive `intervalStep`.
 package retrier
 
 import (
@@ -8,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Retrier - component for retry job.
 type Retrier struct {
 	logger       *zap.Logger
 	attempts     int
@@ -16,6 +20,7 @@ type Retrier struct {
 
 type RetryFunc func() error
 
+// NewRetrier - create new retriers.
 func NewRetrier(log *zap.Logger, attempts int, intervalStep int) *Retrier {
 	return &Retrier{
 		logger:       log,
@@ -23,6 +28,8 @@ func NewRetrier(log *zap.Logger, attempts int, intervalStep int) *Retrier {
 		intervalStep: intervalStep,
 	}
 }
+
+// Retry - run func for retry.
 func (r *Retrier) Retry(ctx context.Context,
 	f RetryFunc,
 	clauseCanRetry func(error) bool) error {

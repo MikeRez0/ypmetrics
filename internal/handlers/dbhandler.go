@@ -5,6 +5,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// PingDB - Handler for database ping.
 func (mh *MetricsHandler) PingDB(c *gin.Context) {
 	err := mh.Store.Ping()
 	if err != nil {
