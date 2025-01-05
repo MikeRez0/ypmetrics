@@ -52,7 +52,7 @@ type ConfigAgent struct {
 	RateLimit      int    `env:"RATE_LIMIT"`
 }
 
-// Parse and create new agent config
+// NewConfigAgent - Parse and create new agent config.
 func NewConfigAgent() (*ConfigAgent, error) {
 	// null config
 	config := ConfigAgent{}
