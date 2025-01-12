@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/gin-gonic/gin"
+
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
+// MetricListView - Handler for html-page, containing metrics list.
 func (mh *MetricsHandler) MetricListView(c *gin.Context) {
 	type NV struct {
 		Name  string

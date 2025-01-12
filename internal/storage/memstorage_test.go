@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 func TestMemStorage_UpdateCounter(t *testing.T) { //nolint:dupl //false positive

@@ -9,8 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/MikeRez0/ypmetrics/internal/model"
 	"go.uber.org/zap"
+
+	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
 type FileStorage struct {
@@ -48,6 +49,22 @@ func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Lo
 	}
 
 	return &fs, nil
+}
+
+func (fs *FileStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) error {
+	err := fs.MemStorage.BatchUpdate(ctx, metrics)
+	if err != nil {
+		return err
+	}
+
+	if fs.syncSave {
+		err := fs.WriteMetrics()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (fs *FileStorage) UpdateGauge(ctx context.Context,

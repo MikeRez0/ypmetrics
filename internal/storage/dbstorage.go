@@ -10,17 +10,21 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"go.uber.org/zap"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
-	"go.uber.org/zap"
 )
 
 type DBStorage struct {
-	log  *zap.Logger
-	pool *pgxpool.Pool
+	log     *zap.Logger
+	pool    *pgxpool.Pool
+	retrier *retrier.Retrier
 }
 
 //go:embed migrations/*.sql
@@ -35,9 +39,12 @@ func NewDBStorage(dsn string, log *zap.Logger) (*DBStorage, error) {
 		return nil, fmt.Errorf("failed to create a connection pool: %w", err)
 	}
 
+	r := retrier.NewRetrier(log, 3, 3)
+
 	dbs := DBStorage{
-		pool: pool,
-		log:  log,
+		pool:    pool,
+		log:     log,
+		retrier: r,
 	}
 
 	log.Debug("Success connected to db")
@@ -63,9 +70,17 @@ func runMigrations(dsn string) error {
 	return nil
 }
 
+func checkPgxError(err error) bool {
+	if pgErr, ok := err.(*pgconn.PgError); ok { //nolint:errorlint // always PgError
+		return pgerrcode.IsConnectionException(pgErr.Code)
+	}
+
+	return false
+}
+
 func (ds *DBStorage) UpdateGauge(ctx context.Context,
 	metric string, value model.GaugeValue) (model.GaugeValue, error) {
-	err := retrier.Retry(ctx, func() error {
+	err := ds.retrier.Retry(ctx, func() error {
 		mt := model.MetricType(model.GaugeType)
 
 		_, err := ds.pool.Exec(ctx,
@@ -77,7 +92,8 @@ func (ds *DBStorage) UpdateGauge(ctx context.Context,
 		}
 
 		return nil
-	}, 3, ds.log)
+	},
+		checkPgxError)
 
 	if err != nil {
 		return 0, err //nolint:wrapcheck // callback error
@@ -90,7 +106,7 @@ func (ds *DBStorage) UpdateCounter(ctx context.Context,
 	metric string, value model.CounterValue) (model.CounterValue, error) {
 	newVal := value
 
-	err := retrier.Retry(ctx, func() error {
+	err := ds.retrier.Retry(ctx, func() error {
 		mt := model.MetricType(model.GaugeType)
 
 		row := ds.pool.QueryRow(ctx,
@@ -107,7 +123,8 @@ func (ds *DBStorage) UpdateCounter(ctx context.Context,
 		}
 
 		return nil
-	}, 3, ds.log)
+	},
+		checkPgxError)
 
 	if err != nil {
 		return 0, err //nolint:wrapcheck // callback error
@@ -158,10 +175,10 @@ func (ds *DBStorage) readMetrics(ctx context.Context, id string) ([]model.Metric
 }
 
 func (ds *DBStorage) Ping() error {
-	err := retrier.Retry(context.Background(),
+	err := ds.retrier.Retry(context.Background(),
 		func() error {
 			return ds.pool.Ping(context.Background())
-		}, 3, ds.log)
+		}, checkPgxError)
 	if err != nil {
 		return fmt.Errorf("error connecting DB: %w", err)
 	}
@@ -203,7 +220,7 @@ func (ds *DBStorage) Metrics() (res []model.Metrics) {
 func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) error {
 	ds.log.Info("Start writing Batch metrics to database")
 
-	err := retrier.Retry(ctx, func() error {
+	err := ds.retrier.Retry(ctx, func() error {
 		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
 		if err != nil {
 			return fmt.Errorf("error starting transaction: %w", err)
@@ -223,11 +240,21 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 
 			switch m.MType {
 			case model.GaugeType:
+				if m.Value == nil {
+					return model.NewErrBadValue("value is nil for metric: " + m.ID)
+				}
+
 				statement += `ON CONFLICT ("id") DO UPDATE
 				SET "mtype" = $2, "delta" = $3, "value" = $4, "updts" = $5;`
 			case model.CounterType:
+				if m.Delta == nil {
+					return model.NewErrBadValue("delta is nil for metric: " + m.ID)
+				}
+
 				statement += `ON CONFLICT ("id") DO UPDATE
 				SET "mtype" = $2, "delta" = metric.delta + EXCLUDED.delta, "value" = $4, "updts" = $5;`
+			default:
+				return model.NewErrBadValue(fmt.Sprintf("unrecognized metric type %s", m.MType))
 			}
 
 			_, err := tx.Exec(ctx, statement,
@@ -242,7 +269,7 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 			return fmt.Errorf("error commiting transaction: %w", err)
 		}
 		return nil
-	}, 3, ds.log)
+	}, checkPgxError)
 	if err != nil {
 		return err //nolint:wrapcheck //error from callback
 	}
