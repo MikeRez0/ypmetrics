@@ -1,4 +1,4 @@
-// Package logger - app logger and gin middleware
+// Package logger - app logger and gin middleware.
 package logger
 
 import (
