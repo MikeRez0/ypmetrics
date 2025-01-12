@@ -3,9 +3,9 @@ package handlers_test
 import "net/http"
 
 type want struct {
-	code        int
 	body        string
 	contentType string
+	code        int
 }
 
 type testData struct {

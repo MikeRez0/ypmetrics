@@ -1,3 +1,4 @@
+// Package server - server app for collecting and storing metrics.
 package server
 
 import (

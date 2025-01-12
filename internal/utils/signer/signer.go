@@ -1,4 +1,4 @@
-// Signer - util for create and verify hash for json.
+// Package signer - util for create and verify hash for json.
 package signer
 
 import (

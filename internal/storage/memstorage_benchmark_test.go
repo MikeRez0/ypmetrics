@@ -12,7 +12,7 @@ import (
 func BenchmarkMemStorage(b *testing.B) {
 	s := storage.NewMemStorage()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		for j := range 100 {
 			_, err := s.UpdateCounter(context.Background(), "testCounter"+strconv.Itoa(j%10), 5)
 			if err != nil {

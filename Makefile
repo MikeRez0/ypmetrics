@@ -86,3 +86,7 @@ db-migration-down:
         -path=/migrations \
         -database postgres://metrics:metrics@localhost:5432/metrics_db?sslmode=disable \
         down 1
+
+.PHONY: multicheck
+multicheck:
+	go run cmd/staticlint/main.go ./...

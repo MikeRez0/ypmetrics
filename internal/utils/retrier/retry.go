@@ -1,4 +1,4 @@
-// Retrier - util for retry job.
+// Package retrier - util for retry job.
 //
 // Will retry `attempts` times with progressive `intervalStep`.
 package retrier
