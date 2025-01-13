@@ -98,27 +98,35 @@ func getTestData() []testData {
 			`},
 		},
 		{
-			name:    "Pos udpate Batch JSON",
-			request: "/updates/",
+			name:    "Pos udpate Gauge JSON",
+			request: "/update/",
 			requestBody: `
-			[{"id":"testCounterJSON",
-			"type":"counter",
-			"delta":5
-			},{"id":"testCounterJSON2",
-			"type":"counter",
-			"delta":52
-			}]
+			{"id":"testGaugeJSON1",
+			"type":"gauge",
+			"value":5.1
+			}
 			`,
 			contentType: "application/json",
 			method:      http.MethodPost,
 			want: want{code: 200, contentType: "application/json", body: `
-			[{"id":"testCounterJSON",
-			"type":"counter",
-			"delta":5
-			},{"id":"testCounterJSON2",
-			"type":"counter",
-			"delta":52
-			}]
+			{"id":"testGaugeJSON1",
+			"type":"gauge",
+			"value":5.1
+			}
+			`},
+		},
+		{
+			name:    "Pos udpate Batch JSON",
+			request: "/updates/",
+			requestBody: `[	{"type":"counter","delta":5,"id":"testCounterJSON"},
+							{"type":"counter","delta":52,"id":"testCounterJSON2"}]`,
+			contentType: "application/json",
+			method:      http.MethodPost,
+			want: want{
+				code:        200,
+				contentType: "application/json",
+				body: `[{"id":"testCounterJSON","type":"counter","delta":5},
+						{"id":"testCounterJSON2","type":"counter","delta":52}]
 			`},
 		},
 		{

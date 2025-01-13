@@ -72,6 +72,15 @@ func (s *Signer) ValidateJSON(data any, h string) bool {
 	return exp == h
 }
 
+// Validate  - validate data with hash.
+func (s *Signer) Validate(data []byte, h string) bool {
+	exp, err := s.GetHashBA(data)
+	if err != nil {
+		return false
+	}
+	return exp == h
+}
+
 func (s *Signer) Reset() {
 	s.h.Reset()
 }

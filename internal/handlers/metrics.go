@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -195,12 +197,6 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 // BatchUpdateMetricsJSON - Update multiple metrics by JSON request.
 func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 	var metrics []model.Metrics
-	if err := c.ShouldBindJSON(&metrics); err != nil {
-		// _ = c.Error(err)
-		// c.AbortWithStatus(http.StatusBadRequest)
-		handleError(c, http.StatusBadRequest, err, nil, "")
-		return
-	}
 
 	hashReq := c.Request.Header.Get(model.HeaderSignerHash)
 	if mh.Signer != nil && hashReq == "" {
@@ -210,12 +206,25 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 	if hashReq != "" {
 		mh.Log.Debug("Request hash", zap.String("Hash", hashReq))
 	}
-	if mh.Signer != nil && !mh.Signer.ValidateJSON(metrics, hashReq) {
+
+	data, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		handleError(c, http.StatusBadRequest, err, nil, "")
+		return
+	}
+
+	if mh.Signer != nil && !mh.Signer.Validate(data, hashReq) {
 		handleError(c, http.StatusBadRequest, errors.New("hash value error"), mh.Log, "")
 		return
 	}
 
-	err := mh.Store.BatchUpdate(c, metrics)
+	if err = json.Unmarshal(data, &metrics); err != nil {
+		// if err = c.ShouldBindJSON(&metrics); err != nil {
+		handleError(c, http.StatusBadRequest, err, nil, "")
+		return
+	}
+
+	err = mh.Store.BatchUpdate(c, metrics)
 	if err != nil {
 		if errors.As(err, &model.BadValueError{}) {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
