@@ -9,11 +9,13 @@ golangci-lint-run:
 
 .PHONY: build-server
 build-server:
-	go build -C cmd/server
+	go build -C cmd/server \
+		-ldflags "-X 'main.buildVersion=${appver}' -X 'main.buildDate=$(shell date +'%Y/%m/%d %H:%M:%S')' -X 'main.buildCommit=${shell git rev-parse --short HEAD}'"
 
 .PHONY: build-agent
 build-agent:
-	go build -C cmd/agent
+	go build -C cmd/agent \
+		-ldflags "-X 'main.buildVersion=${appver}' -X 'main.buildDate=$(shell date +'%Y/%m/%d %H:%M:%S')' -X 'main.buildCommit=${shell git rev-parse --short HEAD}'"
 
 .PHONY: test
 test:
