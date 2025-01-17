@@ -1,3 +1,4 @@
+// Package model contains app model of metrics.
 package model
 
 import (

@@ -107,7 +107,7 @@ func (fs *FileStorage) WriteMetrics() error {
 		return fmt.Errorf("error opening file: %w", err)
 	}
 	defer func() {
-		err := file.Close()
+		err = file.Close()
 		if err != nil {
 			fs.log.Error("error while closing file", zap.Error(err))
 		}
@@ -133,7 +133,7 @@ func (fs *FileStorage) ReadMetrics(ctx context.Context) error {
 		return fmt.Errorf("error while open file %s: %w", fs.filename, err)
 	}
 	defer func() {
-		err := file.Close()
+		err = file.Close()
 		if err != nil {
 			fs.log.Error("Error while closing file", zap.Error(err))
 		}

@@ -1,3 +1,10 @@
+// Package storage - package for storing metrics data.
+//
+// # MemStorage - inmemory storage.
+//
+// # FileStorage - file storage.
+//
+// # DbStorage - database storage.
 package storage
 
 import (

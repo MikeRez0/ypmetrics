@@ -1,4 +1,4 @@
-// API request handlers for http-server.
+// Package handlers - API request handlers for http-server.
 // Example:
 //
 //	mylog := zap.NewProduction()

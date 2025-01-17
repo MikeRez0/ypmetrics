@@ -12,6 +12,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
 
 func TestMetricsHandler_Server(t *testing.T) {
@@ -33,15 +34,19 @@ func TestMetricsHandler_Server(t *testing.T) {
 		return store
 	}
 
-	mh := &handlers.MetricsHandler{
-		Store: testMemStorage(),
-	}
+	const cSignerTestKey = "Test"
 
 	l := logger.GetLogger("debug")
+	mh, err := handlers.NewMetricsHandler(testMemStorage(), l)
+	assert.NoError(t, err)
+	mh.Signer = signer.NewSigner(cSignerTestKey)
+
 	router := handlers.SetupRouter(mh, l)
 	srv := httptest.NewServer(router)
 
 	tests := getTestData()
+
+	sgn := signer.NewSigner(cSignerTestKey)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -50,6 +55,10 @@ func TestMetricsHandler_Server(t *testing.T) {
 			req.URL = srv.URL + tt.request
 			if tt.requestBody != "" {
 				req.Body = tt.requestBody
+
+				h, err := sgn.GetHashBA([]byte(tt.requestBody))
+				assert.NoError(t, err)
+				req.Header.Add(model.HeaderSignerHash, h)
 			}
 			if tt.contentType != "" {
 				req.SetHeader("Content-Type", tt.contentType)
@@ -59,7 +68,7 @@ func TestMetricsHandler_Server(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want.code, res.StatusCode())
 
-			if tt.want.body != "" {
+			if tt.want.body != "" && (res.StatusCode() == tt.want.code) {
 				if tt.contentType != "application/json" {
 					assert.Equal(t, tt.want.body, string(res.Body()))
 				} else {

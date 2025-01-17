@@ -226,7 +226,7 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 			return fmt.Errorf("error starting transaction: %w", err)
 		}
 		defer func() {
-			err := tx.Rollback(ctx)
+			err = tx.Rollback(ctx)
 			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 				ds.log.Error("error while rollback", zap.Error(err))
 			}
@@ -257,7 +257,7 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 				return model.NewErrBadValue(fmt.Sprintf("unrecognized metric type %s", m.MType))
 			}
 
-			_, err := tx.Exec(ctx, statement,
+			_, err = tx.Exec(ctx, statement,
 				m.ID, mt, m.Delta, m.Value, time.Now())
 			if err != nil {
 				return fmt.Errorf("error upserting metric: %w", err)

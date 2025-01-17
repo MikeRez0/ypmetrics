@@ -1,3 +1,4 @@
+// Package agent - agent application for collecting and reporting metrics.
 package agent
 
 import (

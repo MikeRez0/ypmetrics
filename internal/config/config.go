@@ -1,3 +1,4 @@
+// Package config contains configuration structures and parsers.
 package config
 
 import (
@@ -8,14 +9,14 @@ import (
 )
 
 // ConfigServer - config params for server.
-type ConfigServer struct { //nolint:govet //no need for opimization
+type ConfigServer struct {
 	HostString      string `env:"ADDRESS"`
 	LogLevel        string `env:"LOG_LEVEL"`
-	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE"`
 	DSN             string `env:"DATABASE_DSN"`
 	SignKey         string `env:"KEY"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	Restore         bool   `env:"RESTORE"`
 }
 
 // NewConfigServer - parse and create new server config.

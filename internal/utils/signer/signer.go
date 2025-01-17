@@ -1,4 +1,4 @@
-// Signer - util for create and verify hash for json.
+// Package signer - util for create and verify hash for json.
 package signer
 
 import (
@@ -66,6 +66,15 @@ func (s *Signer) GetHashBA(data []byte) (string, error) {
 // ValidateJSON - validate json data with hash.
 func (s *Signer) ValidateJSON(data any, h string) bool {
 	exp, err := s.GetHashJSON(data)
+	if err != nil {
+		return false
+	}
+	return exp == h
+}
+
+// Validate  - validate data with hash.
+func (s *Signer) Validate(data []byte, h string) bool {
+	exp, err := s.GetHashBA(data)
 	if err != nil {
 		return false
 	}
