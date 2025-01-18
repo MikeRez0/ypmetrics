@@ -23,7 +23,10 @@ func Run() error {
 
 	log.Info(fmt.Sprintf("start agent with config: %v", conf))
 
-	app := NewAgentApp(*conf, log)
+	app, err := NewAgentApp(conf, log)
+	if err != nil {
+		return fmt.Errorf("error creating app: %w", err)
+	}
 
 	ctx := context.Background()
 

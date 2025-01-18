@@ -4,6 +4,7 @@ package agent
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -32,23 +33,35 @@ var runtimeMetricNames []string = []string{
 
 // AgentApp - Agent application.
 type AgentApp struct {
-	log     *zap.Logger
-	metrics *MetricStore
-	retrier *retrier.Retrier
-	host    string
-	keyHash string
+	log       *zap.Logger
+	metrics   *MetricStore
+	retrier   *retrier.Retrier
+	encrypter *signer.Encrypter
+	host      string
+	keyHash   string
 }
 
 // NewAgentApp - Create new agent application.
-func NewAgentApp(conf config.ConfigAgent, log *zap.Logger) *AgentApp {
+func NewAgentApp(conf *config.ConfigAgent, log *zap.Logger) (*AgentApp, error) {
+	var encrypter *signer.Encrypter
+	if conf.CryptoKey != "" {
+		e, err := signer.NewEncrypter(conf.CryptoKey, log.Named("encrypt"))
+		if err != nil {
+			return nil, fmt.Errorf("error creating encrypter: %w", err)
+		}
+
+		encrypter = e
+	}
+
 	r := retrier.NewRetrier(log.Named("Retrier"), 3, 3)
 	return &AgentApp{
-		log:     log,
-		metrics: NewMetricStore(),
-		retrier: r,
-		host:    conf.HostString,
-		keyHash: conf.SignKey,
-	}
+		log:       log,
+		metrics:   NewMetricStore(),
+		retrier:   r,
+		host:      conf.HostString,
+		keyHash:   conf.SignKey,
+		encrypter: encrypter,
+	}, nil
 }
 
 // ReadRuntimeMetrics - read runtime metrics.
@@ -179,12 +192,27 @@ func checkCanRetry(err error) bool {
 }
 
 func (a *AgentApp) sendJSON(requestStr string, jsonStr []byte) error {
-	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(jsonStr))
+	var data = jsonStr
+	var encryptVal string
+
+	if a.encrypter != nil {
+		e, err := a.encrypter.Encrypt(jsonStr)
+		if err != nil {
+			return fmt.Errorf("error encrypt: %w", err)
+		}
+		data = []byte(base64.StdEncoding.EncodeToString(e.Data))
+		encryptVal = base64.StdEncoding.EncodeToString(e.Key)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, requestStr, bytes.NewBuffer(data))
 	if err != nil {
 		return fmt.Errorf("error on %s : %w", requestStr, err)
 	}
 	req.Header.Add("Accept-Encoding", "gzip")
 	req.Header.Add("Content-Type", "application/json")
+	if encryptVal != "" {
+		req.Header.Add(model.HeaderEncryptKey, encryptVal)
+	}
 
 	if a.keyHash != "" {
 		sgn := signer.NewSigner(a.keyHash)

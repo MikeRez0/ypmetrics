@@ -15,6 +15,7 @@ type ConfigServer struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DSN             string `env:"DATABASE_DSN"`
 	SignKey         string `env:"KEY"`
+	CryptoKey       string `env:"CRYPTO_KEY"`
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	Restore         bool   `env:"RESTORE"`
 }
@@ -32,6 +33,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	flag.BoolVar(&config.Restore, "r", true, "Needs restore on start")
 	flag.StringVar(&config.DSN, "d", "", "Database string")
 	flag.StringVar(&config.SignKey, "k", "", "SighHash Key")
+	flag.StringVar(&config.CryptoKey, "crypto-key", "", "Crypto Key")
 	flag.Parse()
 
 	// environment override
@@ -48,6 +50,7 @@ type ConfigAgent struct {
 	HostString     string `env:"ADDRESS"`
 	SignKey        string `env:"KEY"`
 	LogLevel       string `env:"LOG_LEVEL"`
+	CryptoKey      string `env:"CRYPTO_KEY"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
@@ -65,6 +68,7 @@ func NewConfigAgent() (*ConfigAgent, error) {
 	flag.IntVar(&config.RateLimit, "l", 3, "Rate limit")
 	flag.StringVar(&config.SignKey, "k", "", "SighHash Key")
 	flag.StringVar(&config.LogLevel, "log", `error`, "Log level")
+	flag.StringVar(&config.CryptoKey, "crypto-key", "", "Crypto Key")
 	flag.Parse()
 
 	// environment override

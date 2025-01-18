@@ -92,3 +92,7 @@ db-migration-down:
 .PHONY: multicheck
 multicheck:
 	go run cmd/staticlint/main.go ./...
+
+.PHONY: genkey
+genkey:
+	go run cmd/genkey/main.go -d ./.tmp/

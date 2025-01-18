@@ -50,10 +50,19 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
+
 	r := handlers.SetupRouter(h, logger.LoggerWithComponent(mylog, "handlers"))
 
 	if conf.SignKey != "" {
 		h.Signer = signer.NewSigner(conf.SignKey)
+	}
+
+	if conf.CryptoKey != "" {
+		decrypter, err := signer.NewDecrypter(conf.CryptoKey, mylog.Named("decrypt"))
+		if err != nil {
+			return fmt.Errorf("error creating decryptor: %w", err)
+		}
+		h.Decrypter = decrypter
 	}
 
 	err = r.Run(conf.HostString)

@@ -1,4 +1,4 @@
-// Package signer - util for create and verify hash for json.
+// Package signer - cryptography utils for create/verify hash and encrypt/decrypt data.
 package signer
 
 import (
@@ -10,6 +10,7 @@ import (
 	"hash"
 )
 
+// Signer - util for create and verify hash.
 type Signer struct {
 	h hash.Hash
 }
