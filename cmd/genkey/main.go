@@ -8,15 +8,23 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 )
 
 func main() {
+	err := run()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	dir := flag.String("d", "", "output directory with /")
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		log.Fatalf("error generating key: %v", err)
+		return fmt.Errorf("error generating key: %w", err)
 	}
 
 	var pubKeyPEM bytes.Buffer
@@ -25,7 +33,7 @@ func main() {
 		Bytes: x509.MarshalPKCS1PublicKey(&privateKey.PublicKey),
 	})
 	if err != nil {
-		log.Fatalf("error writing certificate: %v", err)
+		return fmt.Errorf("error writing certificate: %w", err)
 	}
 
 	var privateKeyPEM bytes.Buffer
@@ -34,20 +42,27 @@ func main() {
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	})
 	if err != nil {
-		log.Fatalf("error writing private key: %v", err)
+		return fmt.Errorf("error writing private key: %w", err)
 	}
 
 	fc, err := os.Create(*dir + "pubkey.pem")
 	if err != nil {
-		log.Fatalf("error creating file: %v", err)
+		return fmt.Errorf("error creating file: %w", err)
 	}
-	defer fc.Close()
-	fc.Write(pubKeyPEM.Bytes())
+	defer func() { _ = fc.Close() }()
+	_, err = fc.Write(pubKeyPEM.Bytes())
+	if err != nil {
+		return fmt.Errorf("error writing file: %w", err)
+	}
 
 	fk, err := os.Create(*dir + "key.pem")
 	if err != nil {
-		log.Fatalf("error creating file: %v", err)
+		return fmt.Errorf("error creating file: %w", err)
 	}
-	defer fk.Close()
-	fk.Write(privateKeyPEM.Bytes())
+	defer func() { _ = fc.Close() }()
+	_, err = fk.Write(privateKeyPEM.Bytes())
+	if err != nil {
+		return fmt.Errorf("error writing file: %w", err)
+	}
+	return nil
 }
