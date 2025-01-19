@@ -46,10 +46,11 @@ type Repository interface {
 }
 
 type MetricsHandler struct {
-	Store    Repository
-	Template *template.Template
-	Log      *zap.Logger
-	Signer   *signer.Signer
+	Store     Repository
+	Template  *template.Template
+	Log       *zap.Logger
+	Signer    *signer.Signer
+	Decrypter *signer.Decrypter
 }
 
 //go:embed "templates/metrics.html"
