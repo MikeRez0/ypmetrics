@@ -34,3 +34,6 @@ vendor/
 
 #data files
 scripts/db/data/
+
+#pem files
+*.pem

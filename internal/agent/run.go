@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -20,10 +21,13 @@ func Run() error {
 	}
 
 	log := logger.GetLogger(conf.LogLevel)
-
+	log.Info(fmt.Sprintf("cmd args: %v", os.Args[1:]))
 	log.Info(fmt.Sprintf("start agent with config: %v", conf))
 
-	app := NewAgentApp(*conf, log)
+	app, err := NewAgentApp(conf, log)
+	if err != nil {
+		return fmt.Errorf("error creating app: %w", err)
+	}
 
 	ctx := context.Background()
 
@@ -33,17 +37,17 @@ func Run() error {
 	jobStart(ctx, func() error {
 		app.Poll()
 		return nil
-	}, time.Duration(conf.PollInterval)*time.Second, 1, log.Named("Poll go metrics job"))
+	}, conf.PollInterval.Duration, 1, log.Named("Poll go metrics job"))
 
 	jobStart(ctx, func() error {
 		app.ReadGopsutilMetrics()
 		return nil
-	}, time.Duration(conf.PollInterval)*time.Second, 1, log.Named("Poll gopsutil metrics job"))
+	}, conf.PollInterval.Duration, 1, log.Named("Poll gopsutil metrics job"))
 
 	jobStart(ctx, func() error {
 		app.ReportBatch()
 		return nil
-	}, time.Duration(conf.ReportInterval)*time.Second, conf.RateLimit, log.Named("Report metrics job"))
+	}, conf.ReportInterval.Duration, conf.RateLimit, log.Named("Report metrics job"))
 
 	wg.Wait()
 	return nil

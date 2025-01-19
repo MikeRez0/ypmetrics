@@ -14,7 +14,8 @@ import (
 )
 
 func TestReadRuntimeMetrics(t *testing.T) {
-	app := NewAgentApp(config.ConfigAgent{}, logger.GetLogger("info"))
+	app, err := NewAgentApp(&config.ConfigAgent{}, logger.GetLogger("info"))
+	assert.NoError(t, err)
 	app.ReadRuntimeMetrics()
 	for _, v := range runtimeMetricNames {
 		assert.Contains(t, app.metrics.GetGaugeMetrics(), v)
@@ -22,14 +23,16 @@ func TestReadRuntimeMetrics(t *testing.T) {
 }
 
 func Test_poll(t *testing.T) {
-	app := NewAgentApp(config.ConfigAgent{}, logger.GetLogger("info"))
+	app, err := NewAgentApp(&config.ConfigAgent{}, logger.GetLogger("info"))
+	assert.NoError(t, err)
 	app.Poll()
 	assert.Contains(t, app.metrics.GetCounterMetrics(), "PollCount")
 	assert.Contains(t, app.metrics.GetGaugeMetrics(), "RandomValue")
 }
 
 func Test_ReadGopsutil(t *testing.T) {
-	app := NewAgentApp(config.ConfigAgent{}, logger.GetLogger("info"))
+	app, err := NewAgentApp(&config.ConfigAgent{}, logger.GetLogger("info"))
+	assert.NoError(t, err)
 	ms := app.ReadGopsutilMetrics()
 	assert.Contains(t, ms.GetGaugeMetrics(), "TotalMemory")
 	assert.Contains(t, ms.GetGaugeMetrics(), "FreeMemory")
@@ -88,7 +91,8 @@ func Test_report(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	app := NewAgentApp(config.ConfigAgent{HostString: srv.URL[7:], SignKey: "test"}, logger.GetLogger("info"))
+	app, err := NewAgentApp(&config.ConfigAgent{HostString: srv.URL[7:], SignKey: "test"}, logger.GetLogger("info"))
+	assert.NoError(t, err)
 	for i, tt := range tests {
 		testID = i
 		t.Run(tt.name, func(t *testing.T) {

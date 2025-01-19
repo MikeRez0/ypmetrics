@@ -53,6 +53,13 @@ func GinLogger(log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
 
+		// body, err := io.ReadAll(c.Request.Body)
+		// if err != nil {
+		// 	log.Error("body read error: %w", zap.Error(err))
+		// }
+
+		// log.Debug("Body", zap.ByteString("body", body))
+
 		c.Next()
 
 		log.Info("Incoming HTTP request",
