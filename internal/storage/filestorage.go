@@ -21,7 +21,7 @@ type FileStorage struct {
 	syncSave bool
 }
 
-func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Logger) (*FileStorage, error) {
+func NewFileStorage(filename string, saveInterval time.Duration, restore bool, log *zap.Logger) (*FileStorage, error) {
 	fs := FileStorage{
 		MemStorage: *NewMemStorage(),
 		filename:   filename,
@@ -37,7 +37,7 @@ func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Lo
 	}
 
 	if !fs.syncSave {
-		ticker := time.NewTicker(time.Duration(saveInterval) * time.Second)
+		ticker := time.NewTicker(saveInterval)
 		go func() {
 			for range ticker.C {
 				err := fs.WriteMetrics()

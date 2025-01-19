@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
@@ -21,6 +22,7 @@ func Run() error {
 	}
 
 	mylog := logger.GetLogger(conf.LogLevel)
+	mylog.Info(fmt.Sprintf("cmd args: %v", os.Args[1:]))
 	mylog.Info(fmt.Sprintf("start server with config: %v", conf))
 
 	var repo handlers.Repository
@@ -36,7 +38,7 @@ func Run() error {
 	case conf.FileStoragePath != "":
 		repo, err = storage.NewFileStorage(
 			conf.FileStoragePath,
-			conf.StoreInterval,
+			conf.StoreInterval.Duration,
 			conf.Restore,
 			logger.LoggerWithComponent(mylog, "filestorage"))
 		if err != nil {
