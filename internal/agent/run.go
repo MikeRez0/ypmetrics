@@ -84,6 +84,7 @@ func jobStart(ctx context.Context, job func() error, interval time.Duration, wor
 			case <-ticker.C:
 				jobFire <- struct{}{}
 			case <-ctx.Done():
+				log.Debug("Ticker stopped")
 				return
 			}
 		}
