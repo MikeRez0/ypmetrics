@@ -53,12 +53,15 @@ func (e *Encrypter) Encrypt(data []byte) (*Envelope, error) {
 		return nil, fmt.Errorf("error creating cipher: %w", err)
 	}
 
-	nonce := make([]byte, gcmCipher.NonceSize())
+	nonce, err := getRandomBytes(gcmCipher.NonceSize())
+	if err != nil {
+		return nil, fmt.Errorf("error generating nonce: %w", err)
+	}
 
-	hashedData := gcmCipher.Seal(nil, nonce, data, nil)
+	myData := gcmCipher.Seal(nonce, nonce, data, nil)
 
 	env := &Envelope{
-		Data: hashedData,
+		Data: myData,
 		Key:  encrData,
 	}
 

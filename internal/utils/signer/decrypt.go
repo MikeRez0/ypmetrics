@@ -48,9 +48,9 @@ func (d *Decrypter) Decrypt(envelope *Envelope) ([]byte, error) {
 		return nil, fmt.Errorf("error creating cipher: %w", err)
 	}
 
-	nonce := make([]byte, gcmCipher.NonceSize())
+	nonce := envelope.Data[:gcmCipher.NonceSize()]
 
-	data, err := gcmCipher.Open(nil, nonce, envelope.Data, nil)
+	data, err := gcmCipher.Open(nil, nonce, envelope.Data[gcmCipher.NonceSize():], nil)
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting: %w", err)
 	}
