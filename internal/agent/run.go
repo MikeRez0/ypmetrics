@@ -93,6 +93,7 @@ func jobStart(ctx context.Context, wg *sync.WaitGroup,
 				jobFire <- struct{}{}
 			case <-ctx.Done():
 				wg.Done()
+				ticker.Stop()
 				log.Debug("Ticker stopped")
 				return
 			}

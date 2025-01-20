@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
@@ -31,6 +32,11 @@ func Run() error {
 
 	var repo handlers.Repository
 
+	ctxBackround, cancelBackround := context.WithCancel(context.Background())
+	defer cancelBackround()
+
+	wg := &sync.WaitGroup{}
+
 	switch {
 	case conf.DSN != "":
 		repo, err = storage.NewDBStorage(
@@ -40,10 +46,9 @@ func Run() error {
 			return fmt.Errorf("error creating db repo: %w", err)
 		}
 	case conf.FileStoragePath != "":
-		repo, err = storage.NewFileStorage(
-			conf.FileStoragePath,
-			conf.StoreInterval.Duration,
-			conf.Restore,
+		repo, err = storage.NewFileStorage(ctxBackround,
+			conf,
+			wg,
 			logger.LoggerWithComponent(mylog, "filestorage"))
 		if err != nil {
 			return fmt.Errorf("error creating file repo: %w", err)
@@ -82,10 +87,14 @@ func Run() error {
 	go func() {
 		<-shutdown
 		mylog.Info("Start graceful shutdown...")
+
+		cancelBackround()
+
 		err := server.Shutdown(context.Background())
 		if err != nil {
 			mylog.Error("error while shutdown", zap.Error(err))
 		}
+		wg.Wait()
 		waitForShutdown <- struct{}{}
 	}()
 
@@ -94,6 +103,6 @@ func Run() error {
 		return fmt.Errorf("error while run server: %w", err)
 	}
 	<-waitForShutdown
-	fmt.Println("Server shutdowned gracefull")
+	fmt.Println("Server shutdowned graceful")
 	return nil
 }
