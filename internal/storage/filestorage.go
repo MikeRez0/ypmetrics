@@ -23,11 +23,11 @@ type FileStorage struct {
 	syncSave bool
 }
 
-func NewFileStorage(ctx context.Context, config *config.ConfigServer,
+func NewFileStorage(ctx context.Context, conf *config.ConfigServer,
 	wg *sync.WaitGroup, log *zap.Logger) (*FileStorage, error) {
-	filename := config.FileStoragePath
-	saveInterval := config.StoreInterval.Duration
-	restore := config.Restore
+	filename := conf.FileStoragePath
+	saveInterval := conf.StoreInterval.Duration
+	restore := conf.Restore
 	fs := FileStorage{
 		MemStorage: *NewMemStorage(),
 		filename:   filename,
