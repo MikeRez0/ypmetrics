@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 
+	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 )
 
@@ -21,7 +23,11 @@ type FileStorage struct {
 	syncSave bool
 }
 
-func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Logger) (*FileStorage, error) {
+func NewFileStorage(ctx context.Context, conf *config.ConfigServer,
+	wg *sync.WaitGroup, log *zap.Logger) (*FileStorage, error) {
+	filename := conf.FileStoragePath
+	saveInterval := conf.StoreInterval.Duration
+	restore := conf.Restore
 	fs := FileStorage{
 		MemStorage: *NewMemStorage(),
 		filename:   filename,
@@ -30,22 +36,30 @@ func NewFileStorage(filename string, saveInterval int, restore bool, log *zap.Lo
 	}
 
 	if restore {
-		err := fs.ReadMetrics(context.Background())
+		err := fs.ReadMetrics(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error restoring from file %s : %w", filename, err)
 		}
 	}
 
 	if !fs.syncSave {
-		ticker := time.NewTicker(time.Duration(saveInterval) * time.Second)
-		go func() {
-			for range ticker.C {
-				err := fs.WriteMetrics()
-				if err != nil {
-					log.Error("error writing async metrics", zap.Error(err))
+		ticker := time.NewTicker(saveInterval)
+		wg.Add(1)
+		go func(ctx context.Context) {
+			for {
+				select {
+				case <-ticker.C:
+					err := fs.WriteMetrics()
+					if err != nil {
+						log.Error("error writing async metrics", zap.Error(err))
+					}
+				case <-ctx.Done():
+					wg.Done()
+					ticker.Stop()
+					return
 				}
 			}
-		}()
+		}(ctx)
 	}
 
 	return &fs, nil

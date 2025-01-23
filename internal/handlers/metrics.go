@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
 
 const (
@@ -203,14 +205,36 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		handleError(c, http.StatusBadRequest, errors.New("hash expected in header"), mh.Log, "")
 		return
 	}
-	if hashReq != "" {
-		mh.Log.Debug("Request hash", zap.String("Hash", hashReq))
+
+	encryptKey := c.Request.Header.Get(model.HeaderEncryptKey)
+	if mh.Decrypter != nil && encryptKey == "" {
+		handleError(c, http.StatusBadRequest, errors.New("encrypt key expected in header"), mh.Log, "")
+		return
 	}
 
 	data, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		handleError(c, http.StatusBadRequest, err, nil, "")
+		handleError(c, http.StatusBadRequest, err, mh.Log, "")
 		return
+	}
+
+	if mh.Decrypter != nil {
+		key, err := base64.StdEncoding.DecodeString(encryptKey)
+		if err != nil {
+			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+		}
+		encData, err := base64.StdEncoding.DecodeString(string(data))
+		if err != nil {
+			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+		}
+		d, err := mh.Decrypter.Decrypt(&signer.Envelope{
+			Key:  key,
+			Data: encData,
+		})
+		if err != nil {
+			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+		}
+		data = d
 	}
 
 	if mh.Signer != nil && !mh.Signer.Validate(data, hashReq) {

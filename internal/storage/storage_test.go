@@ -2,6 +2,7 @@ package storage_test
 
 import (
 	"compress/gzip"
+	"context"
 	"io"
 	"log"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
@@ -120,7 +122,9 @@ func TestServerMem_Handlers(t *testing.T) {
 }
 
 func TestServerFS_Handlers(t *testing.T) {
-	repo, err := storage.NewFileStorage("test.js", 0, false, l)
+	repo, err := storage.NewFileStorage(context.Background(),
+		&config.ConfigServer{FileStoragePath: "test.js", StoreInterval: config.Duration{Duration: 0}, Restore: false},
+		nil, l)
 	assert.NoError(t, err)
 
 	mh := &handlers.MetricsHandler{

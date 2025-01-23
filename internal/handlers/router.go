@@ -17,6 +17,7 @@ func SetupRouter(h *MetricsHandler, mylog *zap.Logger) *gin.Engine {
 	r.HandleMethodNotAllowed = true
 
 	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
+
 	r.POST("/update/:metricType/:metric/:value", h.UpdateMetricPlain)
 	r.GET("/value/:metricType/:metric", h.GetMetricPlain)
 

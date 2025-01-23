@@ -10,6 +10,9 @@ import (
 // HeaderSignerHash - Header key in request for hash-body.
 const HeaderSignerHash = "HashSHA256"
 
+// HeaderEncryptKey - Header key in request for decrypt body.
+const HeaderEncryptKey = "-X-Encrypt"
+
 // GaugeType - name for gauge.
 const GaugeType = "gauge"
 
