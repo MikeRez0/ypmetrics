@@ -103,6 +103,6 @@ func Run() error {
 		return fmt.Errorf("error while run server: %w", err)
 	}
 	<-waitForShutdown
-	fmt.Println("Server shutdowned graceful")
+	fmt.Println("Server was shut down gracefully")
 	return nil
 }
