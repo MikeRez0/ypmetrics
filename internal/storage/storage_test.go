@@ -105,7 +105,7 @@ func TestServerDB_Handlers(t *testing.T) {
 		Log:   l,
 	}
 
-	router := handlers.SetupRouter(mh, l)
+	router := handlers.SetupRouter(mh, l, nil)
 	runHandlerTests(t, router)
 }
 
@@ -117,7 +117,7 @@ func TestServerMem_Handlers(t *testing.T) {
 		Log:   l,
 	}
 
-	router := handlers.SetupRouter(mh, l)
+	router := handlers.SetupRouter(mh, l, nil)
 	runHandlerTests(t, router)
 }
 
@@ -132,6 +132,6 @@ func TestServerFS_Handlers(t *testing.T) {
 		Log:   l,
 	}
 
-	router := handlers.SetupRouter(mh, l)
+	router := handlers.SetupRouter(mh, l, nil)
 	runHandlerTests(t, router)
 }

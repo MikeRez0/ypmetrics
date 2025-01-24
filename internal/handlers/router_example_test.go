@@ -22,7 +22,7 @@ func ExampleHandler() {
 		log.Fatal(err)
 	}
 
-	router := handlers.SetupRouter(mh, l)
+	router := handlers.SetupRouter(mh, l, nil)
 	srv := httptest.NewServer(router)
 
 	req := resty.New().R()

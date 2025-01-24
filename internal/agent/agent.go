@@ -17,6 +17,7 @@ import (
 
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
@@ -39,6 +40,7 @@ type AgentApp struct {
 	encrypter *signer.Encrypter
 	host      string
 	keyHash   string
+	ipValue   string
 }
 
 // NewAgentApp - Create new agent application.
@@ -53,6 +55,15 @@ func NewAgentApp(conf *config.ConfigAgent, log *zap.Logger) (*AgentApp, error) {
 		encrypter = e
 	}
 
+	ip, err := netctrl.GetOutboundIP()
+	if err != nil {
+		log.Error("error on read host IP", zap.Error(err))
+	}
+	ipVal := ""
+	if ip != nil {
+		ipVal = ip.String()
+	}
+
 	r := retrier.NewRetrier(log.Named("Retrier"), 3, 3)
 	return &AgentApp{
 		log:       log,
@@ -61,6 +72,7 @@ func NewAgentApp(conf *config.ConfigAgent, log *zap.Logger) (*AgentApp, error) {
 		host:      conf.HostString,
 		keyHash:   conf.SignKey,
 		encrypter: encrypter,
+		ipValue:   ipVal,
 	}, nil
 }
 
@@ -212,6 +224,9 @@ func (a *AgentApp) sendJSON(requestStr string, jsonStr []byte) error {
 	req.Header.Add("Content-Type", "application/json")
 	if encryptVal != "" {
 		req.Header.Add(model.HeaderEncryptKey, encryptVal)
+	}
+	if a.ipValue != "" {
+		req.Header.Add(netctrl.HeaderIPKey, a.ipValue)
 	}
 
 	if a.keyHash != "" {

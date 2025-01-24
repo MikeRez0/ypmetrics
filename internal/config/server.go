@@ -28,6 +28,7 @@ type ConfigServer struct {
 	DSN             string   `env:"DATABASE_DSN" json:"database_dsn"`
 	SignKey         string   `env:"KEY"`
 	CryptoKey       string   `env:"CRYPTO_KEY" json:"crypto_key"`
+	TrustedSubnet   string   `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
 	StoreInterval   Duration `json:"store_interval"` //env:"STORE_INTERVAL"
 	Restore         bool     `env:"RESTORE" json:"restore"`
 }
@@ -44,6 +45,7 @@ func NewConfigServer() (*ConfigServer, error) {
 		DSN:             "",
 		SignKey:         "",
 		CryptoKey:       "",
+		TrustedSubnet:   "",
 	}
 
 	err := loadConfigFile(&config)
@@ -63,6 +65,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	flag.StringVar(&config.DSN, "d", config.DSN, "Database string")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "SighHash Key")
 	flag.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "Crypto Key")
+	flag.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "Trusted subnet (CIDR)")
 	flag.Parse()
 
 	if storeInterval != -1 {

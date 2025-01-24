@@ -15,6 +15,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
+	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 	"go.uber.org/zap"
 )
@@ -62,7 +63,15 @@ func Run() error {
 		return fmt.Errorf("error creating handler: %w", err)
 	}
 
-	r := handlers.SetupRouter(h, logger.LoggerWithComponent(mylog, "handlers"))
+	var netc *netctrl.IPControl
+	if conf.TrustedSubnet != "" {
+		netc, err = netctrl.NewIPControl(conf.TrustedSubnet, mylog.Named("netcontrol"))
+		if err != nil {
+			return fmt.Errorf("error creating net control: %w", err)
+		}
+	}
+
+	r := handlers.SetupRouter(h, logger.LoggerWithComponent(mylog, "handlers"), netc)
 
 	if conf.SignKey != "" {
 		h.Signer = signer.NewSigner(conf.SignKey)

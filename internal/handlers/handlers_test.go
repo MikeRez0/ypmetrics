@@ -41,7 +41,7 @@ func TestMetricsHandler_Server(t *testing.T) {
 	assert.NoError(t, err)
 	mh.Signer = signer.NewSigner(cSignerTestKey)
 
-	router := handlers.SetupRouter(mh, l)
+	router := handlers.SetupRouter(mh, l, nil)
 	srv := httptest.NewServer(router)
 
 	tests := getTestData()
