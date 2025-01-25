@@ -78,12 +78,12 @@ func (ms *MemStorage) UpdateGauge(ctx context.Context,
 
 	v, _ := ms.MetricsGauge.Load(metric)
 
-	return v.(model.GaugeValue), nil //nolint:forcetypeassert,errcheck //this is why
+	return v.(model.GaugeValue), nil //nolint:forcetypeassert,errcheck,nolintlint //this is why
 }
 
 func (ms *MemStorage) GetGauge(ctx context.Context, metric string) (model.GaugeValue, error) {
 	if val, ok := ms.MetricsGauge.Load(metric); ok {
-		return val.(model.GaugeValue), nil //nolint:forcetypeassert,errcheck //this is why
+		return val.(model.GaugeValue), nil //nolint:forcetypeassert,errcheck,nolintlint //this is why
 	} else {
 		return 0, fmt.Errorf("not found %s", metric)
 	}
@@ -99,12 +99,12 @@ func (ms *MemStorage) UpdateCounter(ctx context.Context,
 	ms.MetricsCounter.Store(metric, val+value)
 
 	v, _ := ms.MetricsCounter.Load(metric)
-	return v.(model.CounterValue), nil //nolint:forcetypeassert,errcheck //this is why
+	return v.(model.CounterValue), nil //nolint:forcetypeassert,errcheck,nolintlint //this is why
 }
 
 func (ms *MemStorage) GetCounter(ctx context.Context, metric string) (model.CounterValue, error) {
 	if val, ok := ms.MetricsCounter.Load(metric); ok {
-		return val.(model.CounterValue), nil //nolint:forcetypeassert,errcheck //this is why
+		return val.(model.CounterValue), nil //nolint:forcetypeassert,errcheck,nolintlint //this is why
 	} else {
 		return 0, fmt.Errorf("not found %s", metric)
 	}
