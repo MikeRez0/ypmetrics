@@ -18,12 +18,12 @@ type IPControl struct {
 }
 
 func NewIPControl(ipnet string, log *zap.Logger) (*IPControl, error) {
-	_, net, err := net.ParseCIDR(ipnet)
+	_, n, err := net.ParseCIDR(ipnet)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing CIDR: %w", err)
 	}
 	return &IPControl{
-		whiteNet: *net,
+		whiteNet: *n,
 		log:      log,
 	}, nil
 }
