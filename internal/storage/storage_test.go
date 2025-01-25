@@ -3,6 +3,7 @@ package storage_test
 import (
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http/httptest"
@@ -23,16 +24,17 @@ import (
 var dbtest *TestDBInstance
 var l *zap.Logger
 
-func setup() {
+func setup() error {
 	var err error
 	dbtest, err = NewTestDBInstance()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	l, err = zap.NewProduction()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to create log:%w", err)
 	}
+	return nil
 }
 func shutdown() {
 	if dbtest != nil {
@@ -45,7 +47,12 @@ func shutdown() {
 }
 
 func TestMain(m *testing.M) {
-	setup()
+	err := setup()
+	if err != nil {
+		shutdown()
+		fmt.Printf("SKIP Test is skipped. Failed to setup environment:%v", err)
+		return
+	}
 	code := m.Run()
 	shutdown()
 	os.Exit(code)
