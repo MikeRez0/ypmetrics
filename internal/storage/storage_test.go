@@ -32,7 +32,7 @@ func setup() error {
 	}
 	l, err = zap.NewProduction()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create log:%w", err)
 	}
 	return nil
 }
