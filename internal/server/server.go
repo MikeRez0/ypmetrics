@@ -11,9 +11,10 @@ import (
 	"sync"
 	"syscall"
 
+	handlers "github.com/MikeRez0/ypmetrics/internal/api/http"
 	"github.com/MikeRez0/ypmetrics/internal/config"
-	"github.com/MikeRez0/ypmetrics/internal/handlers"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
+	"github.com/MikeRez0/ypmetrics/internal/service"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
@@ -31,7 +32,7 @@ func Run() error {
 	mylog.Info(fmt.Sprintf("cmd args: %v", os.Args[1:]))
 	mylog.Info(fmt.Sprintf("start server with config: %v", conf))
 
-	var repo handlers.Repository
+	var repo service.Repository
 
 	ctxBackround, cancelBackround := context.WithCancel(context.Background())
 	defer cancelBackround()
@@ -58,9 +59,14 @@ func Run() error {
 		repo = storage.NewMemStorage()
 	}
 
-	h, err := handlers.NewMetricsHandler(repo, logger.LoggerWithComponent(mylog, "handlers"))
+	serv, err := service.NewMetricService(repo, logger.LoggerWithComponent(mylog, "service"))
 	if err != nil {
-		return fmt.Errorf("error creating handler: %w", err)
+		return fmt.Errorf("error creating service: %w", err)
+	}
+
+	h, err := handlers.NewMetricsHandler(serv, logger.LoggerWithComponent(mylog, "api/http"))
+	if err != nil {
+		return fmt.Errorf("error creating http-handler: %w", err)
 	}
 
 	var netc *netctrl.IPControl

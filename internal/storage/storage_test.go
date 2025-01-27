@@ -16,8 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	handlers "github.com/MikeRez0/ypmetrics/internal/api/http"
 	"github.com/MikeRez0/ypmetrics/internal/config"
-	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	"github.com/MikeRez0/ypmetrics/internal/service"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 )
 
@@ -107,10 +108,11 @@ func TestServerDB_Handlers(t *testing.T) {
 	repo, err := storage.NewDBStorage(dbtest.DSN, l)
 	assert.NoError(t, err)
 
-	mh := &handlers.MetricsHandler{
-		Store: repo,
-		Log:   l,
-	}
+	serv, err := service.NewMetricService(repo, l)
+	assert.NoError(t, err)
+
+	mh, err := handlers.NewMetricsHandler(serv, l)
+	assert.NoError(t, err)
 
 	router := handlers.SetupRouter(mh, l, nil)
 	runHandlerTests(t, router)
@@ -119,10 +121,10 @@ func TestServerDB_Handlers(t *testing.T) {
 func TestServerMem_Handlers(t *testing.T) {
 	repo := storage.NewMemStorage()
 
-	mh := &handlers.MetricsHandler{
-		Store: repo,
-		Log:   l,
-	}
+	serv, err := service.NewMetricService(repo, l)
+	assert.NoError(t, err)
+	mh, err := handlers.NewMetricsHandler(serv, l)
+	assert.NoError(t, err)
 
 	router := handlers.SetupRouter(mh, l, nil)
 	runHandlerTests(t, router)
@@ -134,10 +136,10 @@ func TestServerFS_Handlers(t *testing.T) {
 		nil, l)
 	assert.NoError(t, err)
 
-	mh := &handlers.MetricsHandler{
-		Store: repo,
-		Log:   l,
-	}
+	serv, err := service.NewMetricService(repo, l)
+	assert.NoError(t, err)
+	mh, err := handlers.NewMetricsHandler(serv, l)
+	assert.NoError(t, err)
 
 	router := handlers.SetupRouter(mh, l, nil)
 	runHandlerTests(t, router)
