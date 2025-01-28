@@ -218,7 +218,7 @@ func (ds *DBStorage) Metrics() (res []model.Metrics) {
 }
 
 func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) error {
-	ds.log.Info("Start writing Batch metrics to database")
+	ds.log.Debug("Start writing Batch metrics to database")
 
 	err := ds.retrier.Retry(ctx, func() error {
 		tx, err := ds.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -274,6 +274,6 @@ func (ds *DBStorage) BatchUpdate(ctx context.Context, metrics []model.Metrics) e
 		return err //nolint:wrapcheck //error from callback
 	}
 
-	ds.log.Info("End writing Batch metrics to database")
+	ds.log.Debug("End writing Batch metrics to database")
 	return nil
 }

@@ -204,7 +204,7 @@ func (a *AgentApp) ReportBatch() {
 		}
 	} else {
 		err := a.retrier.Retry(context.Background(), func() error {
-			l, err := grpc.Dial(a.host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			l, err := grpc.NewClient(a.host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				return fmt.Errorf("error dial to host: %w", err)
 			}
