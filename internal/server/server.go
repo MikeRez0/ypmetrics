@@ -5,13 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
-	handlers "github.com/MikeRez0/ypmetrics/internal/api/http"
+	apigrpc "github.com/MikeRez0/ypmetrics/internal/api/grpc"
+	apihttp "github.com/MikeRez0/ypmetrics/internal/api/http"
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/service"
@@ -64,7 +66,7 @@ func Run() error {
 		return fmt.Errorf("error creating service: %w", err)
 	}
 
-	h, err := handlers.NewMetricsHandler(serv, logger.LoggerWithComponent(mylog, "api/http"))
+	h, err := apihttp.NewMetricsHandler(serv, logger.LoggerWithComponent(mylog, "api/http"))
 	if err != nil {
 		return fmt.Errorf("error creating http-handler: %w", err)
 	}
@@ -77,7 +79,7 @@ func Run() error {
 		}
 	}
 
-	r := handlers.SetupRouter(h, logger.LoggerWithComponent(mylog, "handlers"), netc)
+	r := apihttp.SetupRouter(h, logger.LoggerWithComponent(mylog, "handlers"), netc)
 
 	if conf.SignKey != "" {
 		h.Signer = signer.NewSigner(conf.SignKey)
@@ -96,6 +98,11 @@ func Run() error {
 		Handler: r.Handler(),
 	}
 
+	grpcServer, err := apigrpc.CreateServer(serv, mylog.Named("grpc"))
+	if err != nil {
+		return fmt.Errorf("error creating grpc server: %w", err)
+	}
+
 	shutdown := make(chan os.Signal, 1)
 	waitForShutdown := make(chan struct{})
 	signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
@@ -109,14 +116,36 @@ func Run() error {
 		if err != nil {
 			mylog.Error("error while shutdown", zap.Error(err))
 		}
+
 		wg.Wait()
 		waitForShutdown <- struct{}{}
 	}()
 
-	err = server.ListenAndServe()
-	if !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("error while run server: %w", err)
+	go func() {
+		err = server.ListenAndServe()
+		if !errors.Is(err, http.ErrServerClosed) {
+			mylog.Error("error run http server", zap.Error(err))
+			shutdown <- syscall.SIGQUIT
+			// return fmt.Errorf("error while run server: %w", err)
+		}
+	}()
+
+	if conf.GRPCHost != "" {
+		go func() {
+			l, err := net.Listen("tcp", conf.GRPCHost)
+			if err != nil {
+				mylog.Error("error listening grpc port", zap.Error(err))
+				return
+			}
+
+			err = grpcServer.Serve(l)
+			if err != nil {
+				mylog.Error("error on serve grpc", zap.Error(err))
+				shutdown <- syscall.SIGQUIT
+			}
+		}()
 	}
+
 	<-waitForShutdown
 	fmt.Println("Server was shut down gracefully")
 	return nil

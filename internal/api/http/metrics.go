@@ -121,10 +121,13 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 	switch {
 	case errors.Is(err, model.ErrDataNotFound):
 		handleError(c, http.StatusNotFound, errors.New("metric not found"), mh.Log, "error")
+		return
 	case errors.Is(err, model.ErrBadRequest):
 		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, "")
+		return
 	case errors.Is(err, model.ErrInternal):
 		handleError(c, http.StatusInternalServerError, err, mh.Log, "Error updating metric: "+metric.ID)
+		return
 	}
 
 	if mh.Signer != nil {
@@ -151,8 +154,10 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 	switch {
 	case errors.Is(err, model.ErrDataNotFound):
 		handleError(c, http.StatusNotFound, errors.New("metric not found"), mh.Log, "error")
+		return
 	case errors.Is(err, model.ErrBadRequest):
 		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, "")
+		return
 	}
 
 	if mh.Signer != nil {
@@ -192,10 +197,12 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		key, err := base64.StdEncoding.DecodeString(encryptKey)
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
 		}
 		encData, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
 		}
 		d, err := mh.Decrypter.Decrypt(&signer.Envelope{
 			Key:  key,
@@ -203,6 +210,7 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		})
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
 		}
 		data = d
 	}
