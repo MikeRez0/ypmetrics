@@ -21,6 +21,7 @@ import (
 	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // Run - runs server on config params.
@@ -98,9 +99,12 @@ func Run() error {
 		Handler: r.Handler(),
 	}
 
-	grpcServer, err := apigrpc.CreateServer(serv, mylog.Named("grpc"))
-	if err != nil {
-		return fmt.Errorf("error creating grpc server: %w", err)
+	var grpcServer *grpc.Server
+	if conf.GRPCHost != "" {
+		grpcServer, err = apigrpc.CreateServer(serv, mylog.Named("grpc"))
+		if err != nil {
+			return fmt.Errorf("error creating grpc server: %w", err)
+		}
 	}
 
 	shutdown := make(chan os.Signal, 1)
@@ -117,6 +121,10 @@ func Run() error {
 			mylog.Error("error while shutdown", zap.Error(err))
 		}
 
+		if grpcServer != nil {
+			grpcServer.GracefulStop()
+		}
+
 		wg.Wait()
 		waitForShutdown <- struct{}{}
 	}()
@@ -130,7 +138,7 @@ func Run() error {
 		}
 	}()
 
-	if conf.GRPCHost != "" {
+	if grpcServer != nil {
 		go func() {
 			l, err := net.Listen("tcp", conf.GRPCHost)
 			if err != nil {

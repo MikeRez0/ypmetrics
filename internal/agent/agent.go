@@ -14,7 +14,10 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	pb "github.com/MikeRez0/ypmetrics/internal/api/grpc/proto"
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
@@ -34,13 +37,14 @@ var runtimeMetricNames []string = []string{
 
 // AgentApp - Agent application.
 type AgentApp struct {
-	log       *zap.Logger
-	metrics   *MetricStore
-	retrier   *retrier.Retrier
-	encrypter *signer.Encrypter
-	host      string
-	keyHash   string
-	ipValue   string
+	log          *zap.Logger
+	metrics      *MetricStore
+	retrier      *retrier.Retrier
+	encrypter    *signer.Encrypter
+	host         string
+	keyHash      string
+	ipValue      string
+	isGRPCClient bool
 }
 
 // NewAgentApp - Create new agent application.
@@ -66,13 +70,14 @@ func NewAgentApp(conf *config.ConfigAgent, log *zap.Logger) (*AgentApp, error) {
 
 	r := retrier.NewRetrier(log.Named("Retrier"), 3, 3)
 	return &AgentApp{
-		log:       log,
-		metrics:   NewMetricStore(),
-		retrier:   r,
-		host:      conf.HostString,
-		keyHash:   conf.SignKey,
-		encrypter: encrypter,
-		ipValue:   ipVal,
+		log:          log,
+		metrics:      NewMetricStore(),
+		retrier:      r,
+		host:         conf.HostString,
+		keyHash:      conf.SignKey,
+		encrypter:    encrypter,
+		ipValue:      ipVal,
+		isGRPCClient: conf.GRPC,
 	}, nil
 }
 
@@ -191,9 +196,44 @@ func (a *AgentApp) ReportBatch() {
 		metrics = append(metrics, metric)
 	}
 
-	err := a.sendMetricBatchJSON(serverURL, metrics)
-	if err != nil {
-		a.log.Error("error sending guage metric json", zap.Error(err))
+	if !a.isGRPCClient {
+		err := a.sendMetricBatchJSON(serverURL, metrics)
+		if err != nil {
+			a.log.Error("error sending guage metric json", zap.Error(err))
+			return
+		}
+	} else {
+		err := a.retrier.Retry(context.Background(), func() error {
+			l, err := grpc.Dial(a.host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				return fmt.Errorf("error dial to host: %w", err)
+			}
+			gc := pb.NewMetricServiceClient(l)
+
+			data := pb.RequestMetricList{}
+			for _, m := range metrics {
+				pm := pb.Metric{
+					Type: string(m.MType),
+					ID:   m.ID,
+				}
+				if m.Value != nil {
+					pm.Value = *m.Value
+				}
+				if m.Delta != nil {
+					pm.Delta = *m.Delta
+				}
+				data.Metrics = append(data.Metrics, &pm)
+			}
+
+			_, err = gc.UpdateMetricBatch(context.Background(), &data)
+			if err != nil {
+				return fmt.Errorf("error metrics update: %w", err)
+			}
+			return nil
+		}, checkCanRetry)
+		if err != nil {
+			a.log.Error("error sending metrics by gRPC", zap.Error(err))
+		}
 	}
 
 	a.metrics.Clear()
