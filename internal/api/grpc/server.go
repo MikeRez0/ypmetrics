@@ -3,13 +3,17 @@ package grpc
 import (
 	"context"
 	"errors"
+	"net"
+	"strings"
 
 	pb "github.com/MikeRez0/ypmetrics/internal/api/grpc/proto"
 	"github.com/MikeRez0/ypmetrics/internal/model"
 	"github.com/MikeRez0/ypmetrics/internal/service"
+	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -99,8 +103,28 @@ func readMetric(m *pb.Metric) model.Metrics {
 	}
 }
 
-func CreateServer(serv service.IMetricService, log *zap.Logger) (*grpc.Server, error) {
-	gs := grpc.NewServer()
+func CreateServer(serv service.IMetricService, log *zap.Logger, netControl *netctrl.IPControl) (*grpc.Server, error) {
+	opts := make([]grpc.ServerOption, 0)
+	if netControl != nil {
+		opts = append(opts, grpc.UnaryInterceptor(
+			func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+				if md, ok := metadata.FromIncomingContext(ctx); ok {
+					if v, ok := md[strings.ToLower(netctrl.HeaderIPKey)]; ok {
+						if ip := net.ParseIP(v[0]); netControl.IsIPAllowed(ip) {
+							return handler(ctx, req)
+						} else {
+							return nil, status.Errorf(codes.Unauthenticated, "%s not allowed", v)
+						}
+					} else {
+						return nil, status.Errorf(codes.Unauthenticated, "%s metadata expected", netctrl.HeaderIPKey)
+					}
+				} else {
+					return nil, status.Errorf(codes.Unauthenticated, "%s metadata expected", netctrl.HeaderIPKey)
+				}
+			}))
+	}
+
+	gs := grpc.NewServer(opts...)
 	pb.RegisterMetricServiceServer(gs, &MetricService{
 		service: serv,
 		log:     log,

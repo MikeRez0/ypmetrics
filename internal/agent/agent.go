@@ -10,12 +10,15 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
+	"time"
 
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
 	pb "github.com/MikeRez0/ypmetrics/internal/api/grpc/proto"
 	"github.com/MikeRez0/ypmetrics/internal/config"
@@ -203,36 +206,10 @@ func (a *AgentApp) ReportBatch() {
 			return
 		}
 	} else {
-		err := a.retrier.Retry(context.Background(), func() error {
-			l, err := grpc.NewClient(a.host, grpc.WithTransportCredentials(insecure.NewCredentials()))
-			if err != nil {
-				return fmt.Errorf("error dial to host: %w", err)
-			}
-			gc := pb.NewMetricServiceClient(l)
-
-			data := pb.RequestMetricList{}
-			for _, m := range metrics {
-				pm := pb.Metric{
-					Type: string(m.MType),
-					ID:   m.ID,
-				}
-				if m.Value != nil {
-					pm.Value = *m.Value
-				}
-				if m.Delta != nil {
-					pm.Delta = *m.Delta
-				}
-				data.Metrics = append(data.Metrics, &pm)
-			}
-
-			_, err = gc.UpdateMetricBatch(context.Background(), &data)
-			if err != nil {
-				return fmt.Errorf("error metrics update: %w", err)
-			}
-			return nil
-		}, checkCanRetry)
+		err := a.sendMetricGRPC(metrics)
 		if err != nil {
 			a.log.Error("error sending metrics by gRPC", zap.Error(err))
+			return
 		}
 	}
 
@@ -313,4 +290,38 @@ func (a *AgentApp) sendMetricBatchJSON(serverURL string, metrics []model.Metrics
 	}
 
 	return a.sendJSON(requestStr, jsonStr)
+}
+
+func (a *AgentApp) sendMetricGRPC(metrics []model.Metrics) error {
+	l, err := grpc.NewClient(a.host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("error dial to host: %w", err)
+	}
+	gc := pb.NewMetricServiceClient(l)
+
+	data := pb.RequestMetricList{}
+	for _, m := range metrics {
+		pm := pb.Metric{
+			Type: string(m.MType),
+			ID:   m.ID,
+		}
+		if m.Value != nil {
+			pm.Value = *m.Value
+		}
+		if m.Delta != nil {
+			pm.Delta = *m.Delta
+		}
+		data.Metrics = append(data.Metrics, &pm)
+	}
+
+	ctx := metadata.NewOutgoingContext(context.Background(),
+		metadata.New(map[string]string{netctrl.HeaderIPKey: a.ipValue}))
+
+	_, err = gc.UpdateMetricBatch(ctx, &data,
+		grpc_retry.WithMax(uint(a.retrier.Attempts)),
+		grpc_retry.WithBackoff(grpc_retry.BackoffExponential(time.Duration(a.retrier.IntervalStep))))
+	if err != nil {
+		return fmt.Errorf("error metrics update: %w", err)
+	}
+	return nil
 }

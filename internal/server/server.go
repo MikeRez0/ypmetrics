@@ -101,7 +101,7 @@ func Run() error {
 
 	var grpcServer *grpc.Server
 	if conf.GRPCHost != "" {
-		grpcServer, err = apigrpc.CreateServer(serv, mylog.Named("grpc"))
+		grpcServer, err = apigrpc.CreateServer(serv, mylog.Named("grpc"), netc)
 		if err != nil {
 			return fmt.Errorf("error creating grpc server: %w", err)
 		}
