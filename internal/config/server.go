@@ -23,11 +23,13 @@ import (
 //	}
 type ConfigServer struct {
 	HostString      string   `env:"ADDRESS" json:"address"`
+	GRPCHost        string   `env:"GRPC_ADDRESS" json:"grpc_address"`
 	LogLevel        string   `env:"LOG_LEVEL"`
 	FileStoragePath string   `env:"FILE_STORAGE_PATH" json:"store_file"`
 	DSN             string   `env:"DATABASE_DSN" json:"database_dsn"`
 	SignKey         string   `env:"KEY"`
 	CryptoKey       string   `env:"CRYPTO_KEY" json:"crypto_key"`
+	TrustedSubnet   string   `json:"trusted_subnet" env:"TRUSTED_SUBNET"`
 	StoreInterval   Duration `json:"store_interval"` //env:"STORE_INTERVAL"
 	Restore         bool     `env:"RESTORE" json:"restore"`
 }
@@ -37,6 +39,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	// null config
 	config := ConfigServer{
 		HostString:      `localhost:8080`,
+		GRPCHost:        "",
 		LogLevel:        `debug`,
 		StoreInterval:   Duration{300 * time.Second},
 		FileStoragePath: "",
@@ -44,6 +47,7 @@ func NewConfigServer() (*ConfigServer, error) {
 		DSN:             "",
 		SignKey:         "",
 		CryptoKey:       "",
+		TrustedSubnet:   "",
 	}
 
 	err := loadConfigFile(&config)
@@ -56,6 +60,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	flag.String("c", "", cConfigFilenameUsage)
 	flag.String("config", "", cConfigFilenameUsage)
 	flag.StringVar(&config.HostString, "a", config.HostString, "HTTP server endpoint")
+	flag.StringVar(&config.GRPCHost, "g", config.GRPCHost, "GRPC server endpoint")
 	flag.StringVar(&config.LogLevel, "l", config.LogLevel, "Log level")
 	flag.IntVar(&storeInterval, "i", -1, "File store interval, 0 - synchrose")
 	flag.StringVar(&config.FileStoragePath, "f", config.FileStoragePath, "File store path, empty - without store")
@@ -63,6 +68,7 @@ func NewConfigServer() (*ConfigServer, error) {
 	flag.StringVar(&config.DSN, "d", config.DSN, "Database string")
 	flag.StringVar(&config.SignKey, "k", config.SignKey, "SighHash Key")
 	flag.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "Crypto Key")
+	flag.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "Trusted subnet (CIDR)")
 	flag.Parse()
 
 	if storeInterval != -1 {

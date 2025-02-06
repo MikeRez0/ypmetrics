@@ -1,4 +1,4 @@
-package handlers
+package http
 
 import (
 	_ "embed"
@@ -17,7 +17,7 @@ func (mh *MetricsHandler) MetricListView(c *gin.Context) {
 		Name  string
 		Value string
 	}
-	metrics := mh.Store.Metrics()
+	metrics := mh.service.Metrics()
 	metricStrings := make([]NV, len(metrics))
 
 	for i, m := range metrics {

@@ -1,4 +1,4 @@
-package handlers_test
+package http_test
 
 import (
 	"fmt"
@@ -6,23 +6,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	handlers "github.com/MikeRez0/ypmetrics/internal/api/http"
+	"github.com/MikeRez0/ypmetrics/internal/logger"
+	"github.com/MikeRez0/ypmetrics/internal/service"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/go-resty/resty/v2"
-	"go.uber.org/zap"
 )
 
 func ExampleHandler() {
-	mh := &handlers.MetricsHandler{
-		Store: storage.NewMemStorage(),
-	}
-
-	l, err := zap.NewProduction()
+	l := logger.GetLogger("info")
+	serv, err := service.NewMetricService(storage.NewMemStorage(), l)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	router := handlers.SetupRouter(mh, l)
+	mh, err := handlers.NewMetricsHandler(serv, l)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	router := handlers.SetupRouter(mh, l, nil)
 	srv := httptest.NewServer(router)
 
 	req := resty.New().R()

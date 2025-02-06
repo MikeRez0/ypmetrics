@@ -26,6 +26,7 @@ type ConfigAgent struct {
 	ReportInterval Duration `json:"report_interval"` //env:"REPORT_INTERVAL"
 	PollInterval   Duration `json:"poll_interval"`   //env:"POLL_INTERVAL"
 	RateLimit      int      `env:"RATE_LIMIT"`
+	GRPC           bool     `env:"GRPC_MODE" json:"grpc_mode"`
 }
 
 // NewConfigAgent - Parse and create new agent config.
@@ -39,6 +40,7 @@ func NewConfigAgent() (*ConfigAgent, error) {
 		SignKey:        "",
 		LogLevel:       "error",
 		CryptoKey:      "",
+		GRPC:           false,
 	}
 
 	err := loadConfigFile(&config)
@@ -51,7 +53,8 @@ func NewConfigAgent() (*ConfigAgent, error) {
 	// cmd string params
 	flag.String("c", "", cConfigFilenameUsage)
 	flag.String("config", "", cConfigFilenameUsage)
-	flag.StringVar(&config.HostString, "a", config.HostString, "HTTP server endpoint")
+	flag.StringVar(&config.HostString, "a", config.HostString, "HTTP/gRPC server endpoint")
+	flag.BoolVar(&config.GRPC, "g", config.GRPC, "Enable gRPC Mode")
 	flag.IntVar(&pollInterval, "p", -1, "Poll interval")
 	flag.IntVar(&reportInterval, "r", -1, "Report interval")
 	flag.IntVar(&config.RateLimit, "l", config.RateLimit, "Rate limit")

@@ -1,4 +1,4 @@
-package handlers
+package http
 
 import (
 	"encoding/base64"
@@ -25,41 +25,46 @@ const (
 // UpdateMetricPlain - Update metric by plain text request.
 func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 	var (
-		metricType = c.Param("metricType")
-		metric     = c.Param("metric")
-		valueRaw   = c.Param("value")
+		valueRaw = c.Param("value")
 	)
 
-	if metric == "" {
+	metric := model.Metrics{
+		MType: model.MetricType(c.Param("metricType")),
+		ID:    c.Param("metric"),
+	}
+
+	if metric.ID == "" {
 		handleError(c, http.StatusNotFound, errors.New(cMetricNotFound), mh.Log, cMetricNotFound)
 		return
 	}
 
-	switch metricType {
+	switch metric.MType {
 	case model.GaugeType:
 		value, err := strconv.ParseFloat(valueRaw, 64)
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "bad request")
 			return
 		}
-		_, err = mh.Store.UpdateGauge(c, metric, model.GaugeValue(value))
-		if err != nil {
-			handleError(c, http.StatusInternalServerError, err, mh.Log, "error on gauge update")
-			return
-		}
+		metric.Value = &value
+
 	case model.CounterType:
 		value, err := strconv.ParseInt(valueRaw, 10, 64)
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "bad request")
 			return
 		}
-		_, err = mh.Store.UpdateCounter(c, metric, model.CounterValue(value))
-		if err != nil {
-			handleError(c, http.StatusInternalServerError, err, mh.Log, "error on counter update")
-			return
-		}
+		metric.Delta = &value
 	default:
-		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metricType), mh.Log, cMetricTypeNotFound)
+		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, cMetricTypeNotFound)
+		return
+	}
+	err := mh.service.UpdateMetric(c, &metric)
+	switch {
+	case errors.Is(err, model.ErrInternal):
+		handleError(c, http.StatusInternalServerError, err, mh.Log, "error on metric update")
+		return
+	case errors.Is(err, model.ErrBadRequest):
+		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, cMetricTypeNotFound)
 		return
 	}
 
@@ -68,38 +73,36 @@ func (mh *MetricsHandler) UpdateMetricPlain(c *gin.Context) {
 
 // GetMetricPlain - Get metric by plain text request.
 func (mh *MetricsHandler) GetMetricPlain(c *gin.Context) {
-	var (
-		metricType = c.Param("metricType")
-		metric     = c.Param("metric")
-	)
+	metric := model.Metrics{
+		MType: model.MetricType(c.Param("metricType")),
+		ID:    c.Param("metric"),
+	}
+	err := mh.service.GetMetric(c, &metric)
+	switch {
+	case errors.Is(err, model.ErrDataNotFound):
+		handleError(c, http.StatusNotFound, err, mh.Log, cMetricNotFound)
+		return
+	case errors.Is(err, model.ErrBadRequest):
+		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, cMetricTypeNotFound)
+		return
+	case errors.Is(err, model.ErrInternal):
+		handleError(c, http.StatusInternalServerError, err, mh.Log, "error on get metric")
+		return
+	}
 
-	switch metricType {
+	switch metric.MType {
 	case model.GaugeType:
-		value, err := mh.Store.GetGauge(c, metric)
-		if err != nil {
-			handleError(c, http.StatusNotFound, err, mh.Log, cMetricNotFound)
-			return
-		}
-		_, err = c.Writer.WriteString(strconv.FormatFloat(float64(value), 'f', -1, 64))
+		_, err := c.Writer.WriteString(strconv.FormatFloat(float64(*metric.Value), 'f', -1, 64))
 		if err != nil {
 			handleError(c, http.StatusInternalServerError, err, mh.Log, "error on get metric")
 			return
 		}
 	case model.CounterType:
-		value, err := mh.Store.GetCounter(c, metric)
-		if err != nil {
-			handleError(c, http.StatusNotFound, err, mh.Log, cMetricNotFound)
-			return
-		}
-		_, err = c.Writer.WriteString(strconv.FormatInt(int64(value), 10))
+		_, err := c.Writer.WriteString(strconv.FormatInt(*metric.Delta, 10))
 		if err != nil {
 			handleError(c, http.StatusInternalServerError, err, mh.Log, "error on get metric")
 			return
 		}
-	default:
-		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metricType),
-			mh.Log, cMetricTypeNotFound)
-		return
 	}
 
 	c.Header("Content-Type", "text/plain")
@@ -114,30 +117,16 @@ func (mh *MetricsHandler) UpdateMetricJSON(c *gin.Context) {
 		handleError(c, http.StatusBadRequest, err, mh.Log, "Bad request")
 		return
 	}
-
-	if metric.ID == "" {
-		handleError(c, http.StatusNotFound, errors.New(cMetricNotFound), mh.Log, cMetricNotFound)
-	}
-
-	switch metric.MType {
-	case model.GaugeType:
-		v, err := mh.Store.UpdateGauge(c, metric.ID, model.GaugeValue(*metric.Value))
-		if err != nil {
-			handleError(c, http.StatusInternalServerError, err, mh.Log, "Error updating metric: "+metric.ID)
-			return
-		}
-		var newVal = float64(v)
-		metric.Value = &newVal
-	case model.CounterType:
-		v, err := mh.Store.UpdateCounter(c, metric.ID, model.CounterValue(*metric.Delta))
-		if err != nil {
-			handleError(c, http.StatusInternalServerError, err, mh.Log, "Error updating metric: "+metric.ID)
-			return
-		}
-		var newVal = int64(v)
-		metric.Delta = &newVal
-	default:
-		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, cMetricTypeNotFound)
+	err := mh.service.UpdateMetric(c, &metric)
+	switch {
+	case errors.Is(err, model.ErrDataNotFound):
+		handleError(c, http.StatusNotFound, errors.New("metric not found"), mh.Log, "error")
+		return
+	case errors.Is(err, model.ErrBadRequest):
+		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, "")
+		return
+	case errors.Is(err, model.ErrInternal):
+		handleError(c, http.StatusInternalServerError, err, mh.Log, "Error updating metric: "+metric.ID)
 		return
 	}
 
@@ -161,26 +150,12 @@ func (mh *MetricsHandler) GetMetricJSON(c *gin.Context) {
 		return
 	}
 
-	if metric.ID == "" {
+	err := mh.service.GetMetric(c, &metric)
+	switch {
+	case errors.Is(err, model.ErrDataNotFound):
 		handleError(c, http.StatusNotFound, errors.New("metric not found"), mh.Log, "error")
-	}
-
-	switch metric.MType {
-	case model.GaugeType:
-		value, err := mh.Store.GetGauge(c, metric.ID)
-		if err != nil {
-			handleError(c, http.StatusNotFound, err, mh.Log, "error")
-			return
-		}
-		metric.Value = (*float64)(&value)
-	case model.CounterType:
-		value, err := mh.Store.GetCounter(c, metric.ID)
-		if err != nil {
-			handleError(c, http.StatusNotFound, err, mh.Log, "error")
-			return
-		}
-		metric.Delta = (*int64)(&value)
-	default:
+		return
+	case errors.Is(err, model.ErrBadRequest):
 		handleError(c, http.StatusBadRequest, fmt.Errorf(cMetricTypeNameNotFound, metric.MType), mh.Log, "")
 		return
 	}
@@ -222,10 +197,12 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		key, err := base64.StdEncoding.DecodeString(encryptKey)
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
 		}
 		encData, err := base64.StdEncoding.DecodeString(string(data))
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
 		}
 		d, err := mh.Decrypter.Decrypt(&signer.Envelope{
 			Key:  key,
@@ -233,6 +210,7 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		})
 		if err != nil {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
+			return
 		}
 		data = d
 	}
@@ -248,9 +226,9 @@ func (mh *MetricsHandler) BatchUpdateMetricsJSON(c *gin.Context) {
 		return
 	}
 
-	err = mh.Store.BatchUpdate(c, metrics)
+	err = mh.service.BatchUpdateMetrics(c, &metrics)
 	if err != nil {
-		if errors.As(err, &model.BadValueError{}) {
+		if errors.Is(err, model.ErrBadRequest) {
 			handleError(c, http.StatusBadRequest, err, mh.Log, "")
 			return
 		}

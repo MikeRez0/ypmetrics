@@ -14,8 +14,8 @@ import (
 // Retrier - component for retry job.
 type Retrier struct {
 	logger       *zap.Logger
-	attempts     int
-	intervalStep int
+	Attempts     int
+	IntervalStep int
 }
 
 type RetryFunc func() error
@@ -24,8 +24,8 @@ type RetryFunc func() error
 func NewRetrier(log *zap.Logger, attempts int, intervalStep int) *Retrier {
 	return &Retrier{
 		logger:       log,
-		attempts:     attempts,
-		intervalStep: intervalStep,
+		Attempts:     attempts,
+		IntervalStep: intervalStep,
 	}
 }
 
@@ -34,7 +34,7 @@ func (r *Retrier) Retry(ctx context.Context,
 	f RetryFunc,
 	clauseCanRetry func(error) bool) error {
 	var err error
-	for i := range r.attempts {
+	for i := range r.Attempts {
 		select {
 		case <-ctx.Done():
 			r.logger.Error("All retries failed :( ")
@@ -50,7 +50,7 @@ func (r *Retrier) Retry(ctx context.Context,
 		}
 		r.logger.Info(fmt.Sprintf("Going to retry # %v with error", i+1), zap.Error(err))
 
-		<-time.After(time.Duration(r.intervalStep*(i+1)) * time.Second)
+		<-time.After(time.Duration(r.IntervalStep*(i+1)) * time.Second)
 	}
 	return err
 }

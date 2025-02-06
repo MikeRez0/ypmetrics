@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package gapi;
+
+option go_package = "github.com/MikeRez0/ypmetrics/internal/gapi";
+
+message Metric {
+    string type = 1;
+    string ID = 2;
+    int64 delta = 3;
+    double value = 4;
+}
+
+message RequestMetric {
+    string type = 1;
+    string ID = 2;
+}
+
+message RequestMetricList {
+    repeated Metric metrics = 1;
+}
+
+message Empty{}
+
+service MetricService {
+    rpc GetMetric (RequestMetric) returns (Metric);
+    rpc UpdateMetric (Metric) returns (Metric);
+    rpc UpdateMetricBatch (RequestMetricList) returns (Empty);
+}

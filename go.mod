@@ -5,6 +5,8 @@ go 1.22.8
 require (
 	github.com/Crocmagnon/fatcontext v0.5.3
 	github.com/stretchr/testify v1.10.0
+	google.golang.org/grpc v1.70.0
+	google.golang.org/protobuf v1.36.1
 )
 
 require (
@@ -66,7 +68,7 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/protobuf v1.36.1 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
 	gotest.tools v2.2.0+incompatible // indirect
 )
 
@@ -79,6 +81,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-resty/resty/v2 v2.12.0
 	github.com/golang-migrate/migrate/v4 v4.17.1
+	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/ory/dockertest v3.3.5+incompatible

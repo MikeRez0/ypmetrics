@@ -10,13 +10,20 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
+	"time"
 
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
+	pb "github.com/MikeRez0/ypmetrics/internal/api/grpc/proto"
 	"github.com/MikeRez0/ypmetrics/internal/config"
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 	"github.com/MikeRez0/ypmetrics/internal/utils/retrier"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
@@ -33,12 +40,14 @@ var runtimeMetricNames []string = []string{
 
 // AgentApp - Agent application.
 type AgentApp struct {
-	log       *zap.Logger
-	metrics   *MetricStore
-	retrier   *retrier.Retrier
-	encrypter *signer.Encrypter
-	host      string
-	keyHash   string
+	log          *zap.Logger
+	metrics      *MetricStore
+	retrier      *retrier.Retrier
+	encrypter    *signer.Encrypter
+	host         string
+	keyHash      string
+	ipValue      string
+	isGRPCClient bool
 }
 
 // NewAgentApp - Create new agent application.
@@ -53,14 +62,25 @@ func NewAgentApp(conf *config.ConfigAgent, log *zap.Logger) (*AgentApp, error) {
 		encrypter = e
 	}
 
+	ip, err := netctrl.GetOutboundIP()
+	if err != nil {
+		log.Error("error on read host IP", zap.Error(err))
+	}
+	ipVal := ""
+	if ip != nil {
+		ipVal = ip.String()
+	}
+
 	r := retrier.NewRetrier(log.Named("Retrier"), 3, 3)
 	return &AgentApp{
-		log:       log,
-		metrics:   NewMetricStore(),
-		retrier:   r,
-		host:      conf.HostString,
-		keyHash:   conf.SignKey,
-		encrypter: encrypter,
+		log:          log,
+		metrics:      NewMetricStore(),
+		retrier:      r,
+		host:         conf.HostString,
+		keyHash:      conf.SignKey,
+		encrypter:    encrypter,
+		ipValue:      ipVal,
+		isGRPCClient: conf.GRPC,
 	}, nil
 }
 
@@ -179,9 +199,18 @@ func (a *AgentApp) ReportBatch() {
 		metrics = append(metrics, metric)
 	}
 
-	err := a.sendMetricBatchJSON(serverURL, metrics)
-	if err != nil {
-		a.log.Error("error sending guage metric json", zap.Error(err))
+	if !a.isGRPCClient {
+		err := a.sendMetricBatchJSON(serverURL, metrics)
+		if err != nil {
+			a.log.Error("error sending guage metric json", zap.Error(err))
+			return
+		}
+	} else {
+		err := a.sendMetricGRPC(metrics)
+		if err != nil {
+			a.log.Error("error sending metrics by gRPC", zap.Error(err))
+			return
+		}
 	}
 
 	a.metrics.Clear()
@@ -212,6 +241,9 @@ func (a *AgentApp) sendJSON(requestStr string, jsonStr []byte) error {
 	req.Header.Add("Content-Type", "application/json")
 	if encryptVal != "" {
 		req.Header.Add(model.HeaderEncryptKey, encryptVal)
+	}
+	if a.ipValue != "" {
+		req.Header.Add(netctrl.HeaderIPKey, a.ipValue)
 	}
 
 	if a.keyHash != "" {
@@ -258,4 +290,38 @@ func (a *AgentApp) sendMetricBatchJSON(serverURL string, metrics []model.Metrics
 	}
 
 	return a.sendJSON(requestStr, jsonStr)
+}
+
+func (a *AgentApp) sendMetricGRPC(metrics []model.Metrics) error {
+	l, err := grpc.NewClient(a.host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("error dial to host: %w", err)
+	}
+	gc := pb.NewMetricServiceClient(l)
+
+	data := pb.RequestMetricList{}
+	for _, m := range metrics {
+		pm := pb.Metric{
+			Type: string(m.MType),
+			ID:   m.ID,
+		}
+		if m.Value != nil {
+			pm.Value = *m.Value
+		}
+		if m.Delta != nil {
+			pm.Delta = *m.Delta
+		}
+		data.Metrics = append(data.Metrics, &pm)
+	}
+
+	ctx := metadata.NewOutgoingContext(context.Background(),
+		metadata.New(map[string]string{netctrl.HeaderIPKey: a.ipValue}))
+
+	_, err = gc.UpdateMetricBatch(ctx, &data,
+		grpc_retry.WithMax(uint(a.retrier.Attempts)),
+		grpc_retry.WithBackoff(grpc_retry.BackoffExponential(time.Duration(a.retrier.IntervalStep))))
+	if err != nil {
+		return fmt.Errorf("error metrics update: %w", err)
+	}
+	return nil
 }

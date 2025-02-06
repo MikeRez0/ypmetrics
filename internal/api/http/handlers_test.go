@@ -1,4 +1,4 @@
-package handlers_test
+package http_test
 
 import (
 	"context"
@@ -8,15 +8,18 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/MikeRez0/ypmetrics/internal/handlers"
+	handlers "github.com/MikeRez0/ypmetrics/internal/api/http"
 	"github.com/MikeRez0/ypmetrics/internal/logger"
 	"github.com/MikeRez0/ypmetrics/internal/model"
+	"github.com/MikeRez0/ypmetrics/internal/service"
 	"github.com/MikeRez0/ypmetrics/internal/storage"
 	"github.com/MikeRez0/ypmetrics/internal/utils/signer"
 )
 
 func TestMetricsHandler_Server(t *testing.T) {
-	testMemStorage := func() *storage.MemStorage {
+	l := logger.GetLogger("debug")
+
+	testMemStorageService := func() service.IMetricService {
 		store := storage.NewMemStorage()
 
 		cval, err := store.UpdateCounter(context.Background(), "MetricCounter", 5)
@@ -31,17 +34,18 @@ func TestMetricsHandler_Server(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, model.GaugeValue(20), gval)
 
-		return store
+		serv, err := service.NewMetricService(store, l)
+		assert.NoError(t, err)
+		return serv
 	}
 
 	const cSignerTestKey = "Test"
 
-	l := logger.GetLogger("debug")
-	mh, err := handlers.NewMetricsHandler(testMemStorage(), l)
+	mh, err := handlers.NewMetricsHandler(testMemStorageService(), l)
 	assert.NoError(t, err)
 	mh.Signer = signer.NewSigner(cSignerTestKey)
 
-	router := handlers.SetupRouter(mh, l)
+	router := handlers.SetupRouter(mh, l, nil)
 	srv := httptest.NewServer(router)
 
 	tests := getTestData()

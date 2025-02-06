@@ -1,4 +1,4 @@
-package handlers
+package http
 
 import (
 	"github.com/gin-contrib/gzip"
@@ -7,14 +7,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/MikeRez0/ypmetrics/internal/logger"
+	"github.com/MikeRez0/ypmetrics/internal/utils/netctrl"
 )
 
 // SetupRouter - create gin router with handlers.
-func SetupRouter(h *MetricsHandler, mylog *zap.Logger) *gin.Engine {
+func SetupRouter(h *MetricsHandler, mylog *zap.Logger, ipControl *netctrl.IPControl) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(logger.GinLogger(mylog))
 	r.HandleMethodNotAllowed = true
+
+	if ipControl != nil {
+		r.Use(ipControl.Handler())
+	}
 
 	r.GET("/", gzip.Gzip(gzip.DefaultCompression), h.MetricListView)
 
